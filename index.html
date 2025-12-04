@@ -90,6 +90,31 @@
         .dialog {
             transition: all 0.3s ease-in-out;
         }
+
+        /* --- NEW STATUS BAR STYLES --- */
+        #status-bar {
+            /* Reset colors and borders */
+            background-color: transparent;
+            border-left: none;
+            /* Use padding-y for spacing when content is present */
+            padding-top: 0;
+            padding-bottom: 0;
+            /* Control height dynamically */
+            max-height: 100px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        #status-bar.active {
+            padding-top: 0.75rem; /* p-3 equivalent */
+            padding-bottom: 0.75rem; /* p-3 equivalent */
+            /* Set a slight background when active, but not yellow */
+            background-color: #e5e7eb; /* gray-200 */
+        }
+        #status-bar:not(.active) {
+            margin-bottom: 0; /* Collapse margin when inactive */
+            /* Override tailwind margin for active state only */
+            margin-bottom: 1.5rem; /* mb-6 equivalent */
+        }
         
         /* --- PULSE ANIMATION FOR SUCCESS --- */
         @keyframes scale-pulse {
@@ -221,8 +246,10 @@
         </p>
 
         <!-- 2. New Dynamic Status Bar (Tile in Use / Count) -->
-        <div id="status-bar" class="text-lg mb-6 min-h-[2rem] p-3 bg-yellow-100 rounded-md text-gray-800 font-medium border-l-4 border-yellow-500">
-            Select a tile size from the options below to begin tiling the square.
+        <!-- Removed yellow classes. Added 'min-h-[2rem]' to maintain vertical rhythm when inactive, removed mb-6 (will be handled by JS toggle) -->
+        <div id="status-bar" class="text-lg mb-6 min-h-[2rem] text-gray-800 font-medium rounded-md">
+            <!-- Adjusted inner content to use flex and justify-between for one-line display -->
+            <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full"></div>
         </div>
 
         <!-- Main Content Wrapper: Side-by-side on large screens -->
@@ -318,6 +345,7 @@
         const tileOptionsSource = document.getElementById('tile-options'); 
         const instructionText = document.getElementById('instruction-text'); // Kept for consistency, but its content is static now
         const statusBar = document.getElementById('status-bar'); // NEW DOM ELEMENT
+        const statusMessageContent = document.getElementById('status-message-content'); // NEW element for content
         const resetButton = document.getElementById('reset-button');
         const gameDialog = document.getElementById('game-dialog');
         const dialogContentArea = document.getElementById('dialog-content-area');
@@ -423,12 +451,14 @@
                 const tileArea = currentTileSize * currentTileSize;
                 const totalAreaFilled = placedTiles.length * tileArea;
 
-                // --- Base Status (New Format) ---
-                let requiredTiles = isFactor ? (totalUnits / tileArea) : 'N/A';
+                // --- Base Status (New Compact Format) ---
+                const tileInUse = `<span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}`;
+                const tilesPlaced = `<span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}`;
                 
+                // Combine into a single line with spacing
                 let baseMessage = `
-                    <p><span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}</p>
-                    <p><span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}${requiredTiles !== 'N/A' ? ` / ${requiredTiles} required` : ''}</p>
+                    <p>${tileInUse}</p>
+                    <p>${tilesPlaced}</p>
                 `;
                 
                 // --- Nudges and Hints ---
@@ -436,23 +466,38 @@
                 
                 // **LOGIC FOR FACTOR TILE NUDGE (75% filled)**
                 if (isFactor && totalAreaFilled / totalUnits >= 0.75 && placedTiles.length < (totalUnits / tileArea)) {
-                    nudgeMessage = ' <span class="text-sm text-green-600 font-semibold">(You\'re close to finding the factor!)</span>';
+                    nudgeMessage = '<p class="text-sm text-green-600 font-semibold">(You\'re close to finding the factor!)</p>';
                 }
                 
                 // LOGIC FOR NON-FACTOR TILE HINT (after 2 placements)
                 const isNonFactor = nonFactorTiles.includes(currentTileSize);
                 if (isNonFactor && placedTiles.length >= 2) {
-                    nudgeMessage = ' <span class="text-sm text-red-500 font-semibold">(Hint: This tile might not be a factor of 12. Try another size?)</span>';
+                    nudgeMessage = '<p class="text-sm text-red-500 font-semibold">(Hint: This tile might not be a factor of 12. Try another size?)</p>';
                 }
                 
-                message = baseMessage + nudgeMessage;
+                // Set status bar to active state
+                statusBar.classList.add('active');
+                
+                // Inject base message into the flex container
+                statusMessageContent.innerHTML = baseMessage;
+                statusMessageContent.classList.remove('opacity-0');
+
+                // If a nudge exists, append it separately below the main line
+                if (nudgeMessage) {
+                    // Create a separate div/p for the nudge below the main flex row
+                    const nudgeContainer = document.createElement('div');
+                    nudgeContainer.innerHTML = nudgeMessage;
+                    statusMessageContent.appendChild(nudgeContainer);
+                }
+
 
             } else {
-                // Initial state
-                message = `Select a tile size from the options below to begin tiling the square.`;
+                // Initial state - hide content
+                message = ''; // Empty message content
+                statusBar.classList.remove('active');
+                statusMessageContent.innerHTML = '';
+                statusMessageContent.classList.add('opacity-0');
             }
-
-            statusBar.innerHTML = message;
         }
 
         // --- Core Drag/Move Logic ---
