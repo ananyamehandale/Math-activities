@@ -8,8 +8,8 @@
 
     <!-- KaTeX CSS and JS for Math Rendering (Make sure this loads correctly) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" xintegrity="sha384-GvrDXHnZaH4W78Q9Rk+B5Wd8JjBwB9Z2Jc0V2YF8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-5f5n8pY2n/i2V9Rk+B5Wd8JjBwB9Z2Jc0V2YF8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" xintegrity="sha384-qfX0D/7/0tK2G2F8t4L9q2Q8V5eJ/7j8G5V7F9F5W6lP4Z2T4" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-5f5n8pY2h/1aD3UvA0vP4Z2T4" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" xintegrity="sha384-qfX0D/7/0tK2G2F8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
 
     <style>
         /* Custom Styles for Grid and Dragging */
@@ -76,6 +76,7 @@
         /* --- GENERAL UI STYLES (Removing rounding where requested) --- */
         #grid-wrapper {
             border-radius: 0; 
+            transition: box-shadow 0.5s, border-color 0.5s; /* Added transition for the effect */
         }
         /* Adjusted this selector to be more specific to avoid conflict with dialog */
         .bg-white:not(.dialog .bg-white) { 
@@ -97,6 +98,27 @@
             background-color: #fecaca; /* Reddish hue when drag is over it */
         }
 
+        /* --- NEW SPARKLE ANIMATION FOR SUCCESS --- */
+        @keyframes sparkle-effect {
+            0% { 
+                box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 20px rgba(16, 185, 129, 0.2); 
+                border-color: #374151; 
+            }
+            50% { 
+                box-shadow: 0 0 20px #4ade80, 0 0 40px #10b981; 
+                border-color: #10b981; /* Tailwind green-500/emerald-600 */
+            }
+            100% { 
+                box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 20px rgba(16, 185, 129, 0.2); 
+                border-color: #374151; 
+            }
+        }
+
+        .sparkle-win {
+            animation: sparkle-effect 1s ease-in-out infinite alternate;
+        }
+
+
         /* Media Query for responsiveness */
         @media (max-width: 1023px) {
             #grid-wrapper {
@@ -112,7 +134,7 @@
             }
         }
     </style>
-    <!-- Firebase Imports: Removed xintegrity and used 'defer' for scripts, but kept the structure -->
+    <!-- Firebase Imports: Required boilerplate for persistence -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -196,6 +218,7 @@
             <h3 id="dialog-title" class="text-2xl font-bold text-gray-800 mb-4">Game Over!</h3>
             <p id="dialog-message" class="text-gray-600 mb-6"></p>
             <div id="summary-content" class="space-y-4"></div>
+            <!-- This button is now only used for the generic 'Continue' or the 'Start New Challenge' in the failure case -->
             <button id="dialog-close-button" class="w-full px-4 py-2 bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition duration-150">
                 Play Again
             </button>
@@ -244,6 +267,8 @@
         const instructionText = document.getElementById('instruction-text');
         const resetButton = document.getElementById('reset-button');
         const gameDialog = document.getElementById('game-dialog');
+        const dialogCloseButton = document.getElementById('dialog-close-button');
+
 
         // Function to calculate the current size of a single unit (cell)
         function calculateUnitSize() {
@@ -335,12 +360,32 @@
         }
 
         function updateStatus() {
+            let message = '';
+            const totalUnits = GRID_SIZE * GRID_SIZE; // 144
+            
             if (currentTileSize) {
-                // Ensure math symbols are correctly rendered
-                instructionText.innerHTML = `<span class="text-gray-800 font-bold">Challenge: Tiling with ${currentTileSize}x${currentTileSize} tiles.</span> Tiles Placed: ${placedTiles.length}.`;
+                const baseMessage = `<span class="text-gray-800 font-bold">Challenge: Tiling with ${currentTileSize}x${currentTileSize} tiles.</span> Tiles Placed: ${placedTiles.length}.`;
+                message = baseMessage;
+                
+                const isFactor = factorTiles.includes(currentTileSize);
+                const tileArea = currentTileSize * currentTileSize;
+                const totalAreaFilled = placedTiles.length * tileArea;
+
+                // **LOGIC FOR FACTOR TILE NUDGE (75% filled)**
+                if (isFactor && totalAreaFilled / totalUnits >= 0.75 && placedTiles.length < (totalUnits / tileArea)) {
+                    message += ' <span class="text-sm text-green-600 font-semibold">(Great, you\'re almost there!)</span>';
+                }
+                
+                // LOGIC FOR NON-FACTOR TILE HINT (after 2 placements)
+                const isNonFactor = nonFactorTiles.includes(currentTileSize);
+                if (isNonFactor && placedTiles.length >= 2) {
+                    message += ' <span class="text-sm text-red-500 font-semibold">(Hint: Maybe try using a different tile size?)</span>';
+                }
             } else {
-                instructionText.innerHTML = `Repeat any one type/size of tile to fill the big $12 \\times 12$ square without any gaps.`;
+                message = `Repeat any one type/size of tile to fill the big $12 \\times 12$ square without any gaps.`;
             }
+
+            instructionText.innerHTML = message;
             // Re-render math on status change
             renderMath();
         }
@@ -596,35 +641,41 @@
 
             // 1. Check Boundary (Ensures the tile stays inside the 12x12 area)
             if (unitX < 0 || unitY < 0 || unitX + size > GRID_SIZE || unitY + size > GRID_SIZE) {
+                // Tile cannot be placed; remove it without showing a message
                 currentDragTile.remove();
-                showDialog('Boundary Error', `The ${size}x${size} tile must be placed entirely within the $12 \\times 12$ square.`);
-                return;
+                return; 
             }
 
             // 2. Check Overlap
             if (checkOverlap(unitX, unitY, size)) {
+                // Tile cannot be placed; remove it without showing a message
                 currentDragTile.remove();
-                showDialog('Overlap Error', 'Tiles cannot overlap with existing tiles. Find an empty spot.');
-                return;
+                return; 
             }
 
             // 3. Finalize Placement (use the snapped coordinates)
             finalizeTilePlacement(unitX, unitY, size, currentDragTile, snapX, snapY);
             
-            // 4. Check Win/Loss Condition
+            // 4. Check Win Condition 
             const totalUnits = GRID_SIZE * GRID_SIZE; // 144
             const tileArea = size * size;
             
-            if (totalUnits % tileArea === 0) {
-                 // Only check for win condition if it's a perfect fit type (factor)
+            // Only check for win condition if it's a perfect fit type (factor)
+            if (factorTiles.includes(size) && (totalUnits % tileArea === 0)) {
                  const requiredTiles = totalUnits / tileArea;
                 if (placedTiles.length === requiredTiles) {
-                    showSummaryDialog(true);
+                    // *** NEW ANIMATION AND DELAY LOGIC ***
+                    gridWrapper.classList.add('sparkle-win');
+                    // Disable reset button temporarily
+                    resetButton.disabled = true;
+
+                    setTimeout(() => {
+                        showSummaryDialog(true);
+                        // Reset button will be enabled when dialog closes/resets game
+                    }, 2000); // 2 second delay
+                    // *** END NEW LOGIC ***
                 }
-            } else if (placedTiles.length >= 1) {
-                // Non-Factor failure is triggered on the first successful placement
-                showSummaryDialog(false, size);
-            }
+            } 
         }
         
         function finalizeTilePlacement(x, y, size, element, snapX, snapY) {
@@ -654,12 +705,19 @@
 
         // --- Dialog and Summary ---
 
+        // Simple dialog is no longer used for errors, only for simple "Continue" confirmations if needed
         function showDialog(title, message) {
+            // Ensure sparkle is removed before showing any dialog
+            gridWrapper.classList.remove('sparkle-win');
+            resetButton.disabled = false;
+
             document.getElementById('dialog-title').textContent = title;
             document.getElementById('dialog-message').textContent = message;
             document.getElementById('summary-content').innerHTML = '';
-            document.getElementById('dialog-close-button').textContent = 'Continue';
-            document.getElementById('dialog-close-button').onclick = hideDialog;
+            
+            dialogCloseButton.style.display = 'block';
+            dialogCloseButton.textContent = 'Continue';
+            dialogCloseButton.onclick = hideDialog;
             
             gameDialog.classList.remove('hidden');
             setTimeout(() => {
@@ -669,35 +727,79 @@
             }, 10);
         }
 
+        // The summary dialog now acts as the forced "Game Over" when they complete a factor or give up on a non-factor.
         function showSummaryDialog(success, sizeAttempted = null) {
+            // Remove animation class and re-enable reset button immediately before dialog shows
+            gridWrapper.classList.remove('sparkle-win');
+            resetButton.disabled = false; 
+
             document.getElementById('dialog-content-area').classList.add('scale-90', 'opacity-0');
             gameDialog.classList.remove('hidden');
 
             const size = currentTileSize || sizeAttempted;
             const tileText = `${size}x${size}`;
+            
+            // Clear summary content first
+            document.getElementById('summary-content').innerHTML = '';
+            dialogCloseButton.style.display = 'none'; // Default to hide the single button
 
             if (success) {
-                document.getElementById('dialog-title').textContent = 'Success! Perfect Fit!';
-                document.getElementById('dialog-message').textContent = `The ${tileText} tiles perfectly filled the $12 \\times 12$ square without any gaps.`;
+                document.getElementById('dialog-title').textContent = 'Amazing Job!';
+                // 1. Celebratory message
+                document.getElementById('dialog-message').textContent = `Great! you filled it perfectly with a ${tileText} tile. You found a factor of 12!`;
+                
+                // Add the mathematical conclusion
+                document.getElementById('summary-content').innerHTML = `
+                    <h4 class="text-lg font-semibold text-indigo-700">Mathematical Conclusion:</h4>
+                    <p class="text-gray-700">A square tile $N \\times N$ can only tile an $M \\times M$ square perfectly if $N$ is a factor of $M$.</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                        <li>**Factors of 12 (Perfect Fit):** Square tiles with side lengths **2, 3, 4, and 6**.</li>
+                        <li>**Non-Factors (Leaves Remainder):** Square tiles with side lengths **5, 7, and 8**. (e.g., $12 \\pmod {5} = 2$ units left over)</li>
+                    </ul>
+                    <!-- Button container for "Back" and "Next" -->
+                    <div class="flex gap-4 pt-4"> 
+                        <button id="btn-back" class="flex-1 px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150">
+                            Back to View
+                        </button>
+                        <button id="btn-next" class="flex-1 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150">
+                            Next Challenge
+                        </button>
+                    </div>
+                `;
+                
+                // Setup listeners after innerHTML update
+                setTimeout(() => {
+                    document.getElementById('btn-back').onclick = hideDialog;
+                    document.getElementById('btn-next').onclick = () => {
+                        hideDialog();
+                        resetGame();
+                    };
+                }, 10);
+
             } else {
-                document.getElementById('dialog-title').textContent = 'Tiling Failed!';
-                // Use double backslash for KaTeX to render the math operator
-                document.getElementById('dialog-message').textContent = `The ${tileText} tile cannot perfectly fill the $12 \\times 12$ square. The side length ${size} is not a factor of 12, leaving a remainder of $${GRID_SIZE} \\pmod {${size}} = ${GRID_SIZE % size}$ units along each side.`;
+                // Failure Case (Non-factor reset)
+                document.getElementById('dialog-title').textContent = 'Tiling Challenge Concluded';
+                document.getElementById('dialog-message').textContent = `You were attempting to tile with ${tileText} tiles. Since the $12 \\times 12$ square could not be perfectly tiled, let's look at the math!`;
+
+                // The mathematical conclusion remains consistent for discovery
+                document.getElementById('summary-content').innerHTML = `
+                    <h4 class="text-lg font-semibold text-indigo-700">Mathematical Conclusion:</h4>
+                    <p class="text-gray-700">A square tile $N \\times N$ can only tile an $M \\times M$ square perfectly if $N$ is a factor of $M$.</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                        <li>**Factors of 12 (Perfect Fit):** Square tiles with side lengths **2, 3, 4, and 6**.</li>
+                        <li>**Non-Factors (Leaves Remainder):** Square tiles with side lengths **5, 7, and 8**. (e.g., $12 \\pmod {5} = 2$ units left over)</li>
+                    </ul>
+                `;
+                
+                // Show and configure the single button for the failure case
+                dialogCloseButton.style.display = 'block';
+                dialogCloseButton.textContent = 'Start New Challenge';
+                dialogCloseButton.onclick = () => {
+                    hideDialog();
+                    resetGame();
+                };
             }
 
-            document.getElementById('summary-content').innerHTML = `
-                <h4 class="text-lg font-semibold text-indigo-700">Mathematical Conclusion:</h4>
-                <p class="text-gray-700">A square tile $N \\times N$ can only tile an $M \\times M$ square perfectly if $N$ is a factor of $M$.</p>
-                <ul class="list-disc list-inside text-gray-700 space-y-2 ml-4">
-                    <li>**Factors of 12 (Perfect Fit):** Square tiles with side lengths **2, 3, 4, and 6**.</li>
-                    <li>**Non-Factors (Leaves Remainder):** Square tiles with side lengths **5, 7, and 8**.</li>
-                </ul>
-            `;
-            document.getElementById('dialog-close-button').textContent = 'Start New Challenge';
-            document.getElementById('dialog-close-button').onclick = () => {
-                hideDialog();
-                resetGame();
-            };
             
             setTimeout(() => {
                 document.getElementById('dialog-content-area').classList.remove('scale-90', 'opacity-0');
@@ -707,6 +809,10 @@
         }
 
         function hideDialog() {
+             // Remove animation class and re-enable reset button when dialog is closed
+            gridWrapper.classList.remove('sparkle-win');
+            resetButton.disabled = false;
+
             document.getElementById('dialog-content-area').classList.add('scale-90', 'opacity-0');
             setTimeout(() => {
                 gameDialog.classList.add('hidden');
@@ -714,12 +820,22 @@
         }
 
         function resetGame() {
+            // Check if they were working on a non-factor tile before fully resetting
+            const wasNonFactorAttempt = currentTileSize !== null && nonFactorTiles.includes(currentTileSize) && placedTiles.length > 0;
+
+            // Full reset
+            const sizeAttempted = currentTileSize;
             currentTileSize = null;
             placedTiles = [];
             initGrid();
             generateTileOptions();
             updateTileOptions(null);
             updateStatus();
+            
+            // If they reset a non-factor challenge, pop up the discovery dialog
+            if (wasNonFactorAttempt) {
+                showSummaryDialog(false, sizeAttempted);
+            }
         }
         
         // Handle resizing for responsiveness
@@ -743,7 +859,8 @@
             initGrid();
             generateTileOptions();
             updateStatus();
-            resetButton.addEventListener('click', resetGame);
+            // The reset button now calls resetGame, which handles the summary dialog check
+            resetButton.addEventListener('click', resetGame); 
             // Initial math render when the page loads
             renderMath();
         };
