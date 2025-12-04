@@ -1,1126 +1,996 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factors of 12</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factors of 12</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- KaTeX CSS and JS for Math Rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" xintegrity="sha384-GvrDXHnZaH4W78Q9Rk+B5Wd8JjBwB9Z2Jc0V2YF8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-5f5n8pY2h/1aD3UvA0vP4Z2T4" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" xintegrity="sha384-qfX0D/7/0tK2G2F8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" xintegrity="sha384-GvrDXHnZaH4W78Q9Rk+B5Wd8JjBwB9Z2Jc0V2YF8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-5f5n8pY2h/1aD3UvA0vP4Z2T4" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" xintegrity="sha384-qfX0D/7/0tK2G2F8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
 
-    <style>
-        /* Custom Styles for Grid and Dragging */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(12, 50px);
-            grid-template-rows: repeat(12, 50px);
-            border: 2px solid #374151;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .grid-cell {
-            border: 1px solid rgba(100, 100, 100, 0.2);
-            box-sizing: border-box;
-        }
+    <style>
+        /* Custom Styles for Grid and Dragging */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(12, 50px);
+            grid-template-rows: repeat(12, 50px);
+            border: 2px solid #374151;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .grid-cell {
+            border: 1px solid rgba(100, 100, 100, 0.2);
+            box-sizing: border-box;
+        }
 
-        /* --- TILE SOURCE STYLES (No rounded corners) --- */
-        .tile-option-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px; /* Space between tile and text */
-        }
-        .draggable-tile-source {
-            cursor: pointer; /* Change from grab to pointer for click selection */
-            transition: transform 0.1s ease;
-            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-            position: relative;
-            border: 1px solid rgba(0, 0, 0, 0.1); 
-            display: grid; 
-            grid-template-columns: var(--tile-grid-template);
-            grid-template-rows: var(--tile-grid-template);
-        }
-        .draggable-tile-source:hover {
-            transform: scale(1.05);
-        }
-        .tile-option-disabled {
-            opacity: 0.3;
-            cursor: not-allowed !important;
-        }
-        .tile-option-selected {
-            border: 3px solid #4F46E5; /* Highlight selected tile */
-            transform: scale(1.1);
-        }
-        
-        /* --- PLACED TILE STYLES (No rounded corners, internal grid lines) --- */
-        .placed-tile {
-            position: absolute;
-            opacity: 0.95;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            cursor: grab;
-            z-index: 10;
-            display: grid;
-            grid-template-columns: var(--tile-grid-template);
-            grid-template-rows: var(--tile-grid-template);
-        }
-        .placed-tile.dragging {
-            opacity: 0.7;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-            cursor: grabbing;
-        }
+        /* --- TILE SOURCE STYLES (Simplified to just selection) --- */
+        .tile-option-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px; /* Space between tile and text */
+        }
+        .draggable-tile-source {
+            cursor: pointer; /* Change from grab to pointer for click selection */
+            transition: transform 0.1s ease;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            border: 1px solid rgba(0, 0, 0, 0.1); 
+            display: grid; 
+            grid-template-columns: var(--tile-grid-template);
+            grid-template-rows: var(--tile-grid-template);
+        }
+        .draggable-tile-source:hover {
+            transform: scale(1.05);
+        }
+        .tile-option-disabled {
+            opacity: 0.3;
+            cursor: not-allowed !important;
+        }
+        .tile-option-selected {
+            border: 3px solid #4F46E5; /* Highlight selected tile */
+            transform: scale(1.1);
+        }
+        
+        /* --- PLACED TILE STYLES (Allows dragging existing tiles) --- */
+        .placed-tile {
+            position: absolute;
+            opacity: 0.95;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+            z-index: 10;
+            display: grid;
+            grid-template-columns: var(--tile-grid-template);
+            grid-template-rows: var(--tile-grid-template);
+        }
+        .placed-tile.dragging {
+            opacity: 0.7;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            cursor: grabbing;
+        }
 
-        /* --- GHOST TILE STYLES --- */
-        #ghost-tile {
-            position: fixed; /* Use fixed positioning for reliable cursor following */
-            pointer-events: none; /* Crucial: allows clicks to pass through to the grid */
-            opacity: 0.3;
-            z-index: 50;
-            display: none; /* Hidden by default */
-            box-shadow: 0 0 10px rgba(79, 70, 229, 0.8); /* Indigo glow */
-            border: 1px dashed #4F46E5; /* Dashed indigo border */
-        }
-        #ghost-tile.invalid {
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); /* Red glow for invalid placement */
-            border: 1px dashed #EF4444; 
-            opacity: 0.2;
-        }
+        /* --- GHOST TILE STYLES (Now follows the cursor for continuous placement) --- */
+        #ghost-tile {
+            position: fixed; /* Use fixed positioning for reliable cursor following */
+            pointer-events: none; /* Crucial: allows clicks to pass through to the grid */
+            opacity: 0.3;
+            z-index: 50;
+            display: none; /* Hidden by default */
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.8); /* Indigo glow */
+            border: 1px dashed #4F46E5; /* Dashed indigo border */
+        }
+        #ghost-tile.invalid {
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); /* Red glow for invalid placement */
+            border: 1px dashed #EF4444; 
+            opacity: 0.2;
+        }
 
-        /* Internal unit squares inside the tile */
-        .tile-unit-cell {
-            border: 1px solid rgba(0, 0, 0, 0.4); 
-            box-sizing: border-box;
-        }
-        
-        /* --- GENERAL UI STYLES --- */
-        #grid-wrapper {
-            border-radius: 0; 
-            transition: box-shadow 0.5s, border-color 0.5s, transform 0.5s; 
-        }
-        .bg-white:not(.dialog .bg-white) { 
-            border-radius: 0; 
-        }
-        .dialog .bg-white {
-             border-radius: 0.5rem; 
-        }
+        /* Internal unit squares inside the tile */
+        .tile-unit-cell {
+            border: 1px solid rgba(0, 0, 0, 0.4); 
+            box-sizing: border-box;
+        }
+        
+        /* --- GENERAL UI STYLES --- */
+        #grid-wrapper {
+            border-radius: 0; 
+            transition: box-shadow 0.5s, border-color 0.5s, transform 0.5s; 
+        }
+        .bg-white:not(.dialog .bg-white) { 
+            border-radius: 0; 
+        }
+        .dialog .bg-white {
+             border-radius: 0.5rem; 
+        }
 
-        .dialog {
-            transition: all 0.3s ease-in-out;
-        }
+        .dialog {
+            transition: all 0.3s ease-in-out;
+        }
 
-        /* --- STATUS BAR STYLES --- */
-        #status-bar-wrapper {
-            max-width: 600px;
-            width: 100%;
-            margin-bottom: 1.5rem;
-        }
-        
-        #status-bar {
-            background-color: transparent;
-            border-left: none;
-            padding-top: 0;
-            padding-bottom: 0;
-            max-height: 100px;
-            overflow: hidden;
-            transition: max-height 0.3s ease, padding 0.3s ease, background-color 0.3s ease;
-        }
-        #status-bar.active {
-            padding-top: 0.5rem; 
-            padding-bottom: 0.5rem; 
-            padding-left: 1rem; 
-            padding-right: 1rem; 
-            background-color: #e5e7eb; /* gray-200 */
-        }
-        #status-message-content > p {
-            margin: 0;
-        }
+        /* --- STATUS BAR STYLES (Fixed to prevent height increase) --- */
+        #status-bar-wrapper {
+            max-width: 600px;
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Constrain height when inactive to prevent jumping */
+        #status-bar {
+            background-color: transparent;
+            border-left: none;
+            padding-top: 0;
+            padding-bottom: 0;
+            max-height: 0; /* Starts collapsed */
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease, background-color 0.3s ease;
+        }
+        #status-bar.active {
+            max-height: 100px; /* Expands to a visible size */
+            padding-top: 0.5rem; 
+            padding-bottom: 0.5rem; 
+            padding-left: 1rem; 
+            padding-right: 1rem; 
+            background-color: #e5e7eb; /* gray-200 */
+        }
+        #status-message-content > p {
+            margin: 0;
+        }
 
-        /* --- PULSE ANIMATION FOR SUCCESS --- */
-        @keyframes scale-pulse {
-            0% { 
-                transform: scale(1);
-                box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 20px rgba(16, 185, 129, 0.2); 
-            }
-            50% { 
-                transform: scale(0.98); 
-                box-shadow: 0 0 20px #4ade80, 0 0 40px #10b981; 
-            }
-            100% { 
-                transform: scale(1.01); 
-                box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 20px rgba(16, 185, 129, 0.2); 
-            }
-        }
+        /* --- PULSE ANIMATION FOR SUCCESS --- */
+        @keyframes scale-pulse {
+            0% { 
+                transform: scale(1);
+                box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 20px rgba(16, 185, 129, 0.2); 
+            }
+            50% { 
+                transform: scale(0.98); 
+                box-shadow: 0 0 20px #4ade80, 0 0 40px #10b981; 
+            }
+            100% { 
+                transform: scale(1.01); 
+                box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 20px rgba(16, 185, 129, 0.2); 
+            }
+        }
 
-        .pulse-win {
-            animation: scale-pulse 1s ease-in-out forwards; 
-        }
+        .pulse-win {
+            animation: scale-pulse 1s ease-in-out forwards; 
+        }
 
-        /* Styling for the dialog text */
-        .success-title {
-            font-size: 2.5rem; 
-            line-height: 1.1;
-            font-weight: 800; 
-            color: #10B981; 
-        }
-        .success-message {
-            font-size: 1.75rem; 
-            line-height: 1.2;
-            color: #374151; 
-        }
-        
-        .factor-display {
-            font-size: 6rem; 
-            font-weight: 900;
-            line-height: 1;
-            color: #4F46E5; 
-            transition: transform 0.3s;
-        }
+        /* Styling for the dialog text */
+        .success-title {
+            font-size: 2.5rem; 
+            line-height: 1.1;
+            font-weight: 800; 
+            color: #10B981; 
+        }
+        .success-message {
+            font-size: 1.75rem; 
+            line-height: 1.2;
+            color: #374151; 
+        }
+        
+        .factor-display {
+            font-size: 6rem; 
+            font-weight: 900;
+            line-height: 1;
+            color: #4F46E5; 
+            transition: transform 0.3s;
+        }
 
-        .dialog-tile-visualization {
-            width: 100px; 
-            height: 100px;
-            display: grid;
-            grid-template-columns: var(--tile-grid-template);
-            grid-template-rows: var(--tile-grid-template);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border: 2px solid #374151;
-        }
-        .dialog-tile-visualization .tile-unit-cell {
-            border: 1px solid rgba(0, 0, 0, 0.4); 
-            box-sizing: border-box;
-        }
-        
-        /* Responsiveness for the dialog text */
-        @media (min-width: 640px) { /* sm breakpoint */
-            .success-title {
-                font-size: 3rem; 
-            }
-            .success-message {
-                font-size: 2.25rem; 
-            }
-        }
+        .dialog-tile-visualization {
+            width: 100px; 
+            height: 100px;
+            display: grid;
+            grid-template-columns: var(--tile-grid-template);
+            grid-template-rows: var(--tile-grid-template);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 2px solid #374151;
+        }
+        .dialog-tile-visualization .tile-unit-cell {
+            border: 1px solid rgba(0, 0, 0, 0.4); 
+            box-sizing: border-box;
+        }
+        
+        /* Responsiveness for the dialog text */
+        @media (min-width: 640px) { /* sm breakpoint */
+            .success-title {
+                font-size: 3rem; 
+            }
+            .success-message {
+                font-size: 2.25rem; 
+            }
+        }
 
 
-        /* Media Query for responsiveness */
-        @media (max-width: 1023px) {
-            #grid-wrapper {
-                width: 100%;
-                height: 100vw; 
-                max-width: 600px;
-                max-height: 600px;
-            }
-            .grid-container {
-                grid-template-columns: repeat(12, minmax(0, 1fr));
-                grid-template-rows: repeat(12, minmax(0, 1fr));
-            }
-            #status-bar-wrapper {
-                margin-left: auto;
-                margin-right: auto;
-            }
-        }
-    </style>
-    <!-- Firebase Imports: Required boilerplate for persistence -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        /* Media Query for responsiveness */
+        @media (max-width: 1023px) {
+            #grid-wrapper {
+                width: 100%;
+                height: 100vw; 
+                max-width: 600px;
+                max-height: 600px;
+            }
+            .grid-container {
+                grid-template-columns: repeat(12, minmax(0, 1fr));
+                grid-template-rows: repeat(12, minmax(0, 1fr));
+            }
+            #status-bar-wrapper {
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+    </style>
+        <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
-        // Firebase Setup (Required boilerplate for persistence)
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'factor-tiling-default';
+        // Firebase Setup (Required boilerplate for persistence)
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'factor-tiling-default';
 
-        if (Object.keys(firebaseConfig).length > 0) {
-            setLogLevel('Debug');
-            window.app = initializeApp(firebaseConfig);
-            window.db = getFirestore(window.app);
-            window.auth = getAuth(window.app);
+        if (Object.keys(firebaseConfig).length > 0) {
+            setLogLevel('Debug');
+            window.app = initializeApp(firebaseConfig);
+            window.db = getFirestore(window.app);
+            window.auth = getAuth(window.app);
 
-            const signIn = async () => {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined') {
-                        await signInWithCustomToken(window.auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(window.auth);
-                    }
-                    console.log("Firebase Auth successful.");
-                } catch (error) {
-                    console.error("Firebase Auth failed:", error);
-                }
-            };
-            signIn();
-        }
-    </script>
+            const signIn = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        await signInWithCustomToken(window.auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(window.auth);
+                    }
+                    console.log("Firebase Auth successful.");
+                } catch (error) {
+                    console.error("Firebase Auth failed:", error);
+                }
+            };
+            signIn();
+        }
+    </script>
 </head>
 <body class="bg-gray-50 min-h-screen p-4 sm:p-8 flex flex-col items-center font-sans">
 
-    <div class="max-w-6xl w-full">
-        <!-- Main Title -->
-        <h1 class="text-5xl sm:text-6xl font-extrabold text-gray-800 mb-2">Factors of 12</h1>
-        
-        <!-- 1. Primary Instruction Text (UPDATED) -->
-        <p id="instruction-text" class="text-xl text-gray-600 mb-2 font-semibold">
-            Repeat any one type/size of tile to fill the big 12×12 12×12 square without any gaps
-        </p>
-
-        <!-- 2. Dynamic Status Bar -->
-        <div id="status-bar-wrapper" class="lg:w-[600px] mx-auto lg:mx-0">
-            <div id="status-bar" class="text-lg text-gray-800 font-medium rounded-md">
-                <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full gap-6"></div>
-            </div>
-        </div>
-
-        <!-- Main Content Wrapper: Side-by-side on large screens -->
-        <div class="flex flex-col lg:flex-row gap-8">
-            
-            <!-- Left Panel: Grid and Control Buttons -->
-            <div class="flex flex-col flex-shrink-0 items-center">
-                 <!-- Grid size adjusted to be fluid on small screens, fixed on large -->
-                 <div id="grid-wrapper" class="relative w-full lg:w-[600px] lg:h-[600px] shadow-2xl overflow-hidden bg-gray-100 aspect-square">
-                    <div id="tiling-grid" class="grid-container w-full h-full">
-                        <!-- Grid cells for visual guidance -->
-                    </div>
-                </div>
-                
-                <!-- Control Buttons: Undo and Reset -->
-                <div class="mt-4 flex space-x-4">
-                    <!-- Undo Button -->
-                    <button id="undo-button" class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold transition duration-200 hover:bg-yellow-600 shadow-md text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" transform="scale(-1, 1) translate(-20, 0) rotate(90 10 10)"/>
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-7-9a1 1 0 011-1h2.586L7.293 8.293a1 1 0 011.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z" clip-rule="evenodd" transform="translate(0, 0) scale(1, -1) rotate(-90 10 10)"/>
-                        </svg>
-                        Undo Last Move
-                    </button>
-
-                    <!-- Reset button, styled to be slightly bigger (py-2 px-4) and centered -->
-                    <button id="reset-button" class="px-4 py-2 bg-red-200 text-black rounded-lg font-semibold transition duration-200 hover:bg-red-300 shadow-md text-base">
-                        Reset Board
-                    </button>
-                </div>
-            </div>
-
-            <!-- Right Panel: Tile Selection (Source) -->
-            <div class="flex-grow space-y-6">
-                
-                <!-- Tile Options / Source -->
-                <div id="tile-options-container" class="bg-white p-6 shadow-lg">
-                    <!-- Tile box heading -->
-                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Click, Drag, and Place in the $12 \times 12$ (&larr;)</h2>
-                    
-                    <!-- This section now uses a responsive grid layout -->
-                    <div id="tile-options" class="flex flex-wrap gap-4 justify-center lg:grid lg:grid-cols-2 lg:gap-x-12 lg:gap-y-6">
-                        <!-- Tiles are dynamically generated here -->
-                    </div>
-                    
-                </div>
-                
-            </div>
-        </div>
-    </div>
-    
-    <!-- Ghost Tile (The tile that follows the cursor) -->
-    <div id="ghost-tile"></div>
-
-    <!-- Dialog for Success/Failure/Summary -->
-    <div id="game-dialog" class="dialog fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-8 shadow-2xl max-w-lg w-full transform scale-90 opacity-0" id="dialog-content-area">
-            <!-- Title and Message will be dynamically replaced -->
-            <div id="simple-message-container" class="space-y-4 text-center">
-                <!-- Content injected here for success/failure -->
-            </div>
-            
-            <!-- Summary Content is still used for the *Failure* case -->
-            <div id="summary-content" class="space-y-4 pt-6"></div>
-            
-            <button id="dialog-close-button" class="mt-6 w-full px-4 py-2 bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition duration-150">
-                Play Again
-            </button>
-        </div>
-    </div>
-
-    <script type="module">
-        
-        function renderMath() {
-            if (typeof renderMathInElement !== 'undefined') {
-                renderMathInElement(document.body, {
-                    delimiters: [
-                        {left: "$$", right: "$$", display: true},
-                        {left: "$", right: "$", display: false}
-                    ]
-                });
-            }
-        }
-        
-        const GRID_SIZE = 12; // 12x12 grid
-        let UNIT_PIXEL_SIZE = 50; 
-        
-        const tileSizes = [2, 3, 4, 5, 6, 7, 8];
-        const factorTiles = [2, 3, 4, 6];
-        const nonFactorTiles = [5, 7, 8];
-        const tileColors = {
-            2: 'bg-green-500', 3: 'bg-orange-500', 4: 'bg-blue-500', 5: 'bg-yellow-500',
-            6: 'bg-red-500', 7: 'bg-indigo-300', 8: 'bg-pink-300'
-        };
-
-        let currentTileSize = null;
-        // Stores {x, y, size, element} for easy DOM and physics access
-        let placedTiles = []; 
-        // Stores serializable history: [{ x, y, size }]
-        let history = []; 
-        const MAX_HISTORY = 30;
-
-        let isDragging = false; // True when moving an existing tile OR dragging from source
-        let dragOriginIsSource = false; // True if the drag started from the options box
-        let currentDragTile = null; // The element being dragged (placed tile or source clone)
-        let dragOffsetX, dragOffsetY; // Offset from mouse to tile corner
-
-        // DOM Elements
-        const gridWrapper = document.getElementById('grid-wrapper');
-        const tilingGrid = document.getElementById('tiling-grid');
-        const tileOptionsContainer = document.getElementById('tile-options-container');
-        const tileOptionsSource = document.getElementById('tile-options'); 
-        const statusBar = document.getElementById('status-bar');
-        const statusMessageContent = document.getElementById('status-message-content');
-        const resetButton = document.getElementById('reset-button');
-        const undoButton = document.getElementById('undo-button'); 
-        const gameDialog = document.getElementById('game-dialog');
-        const dialogContentArea = document.getElementById('dialog-content-area');
-        const simpleMessageContainer = document.getElementById('simple-message-container');
-        const ghostTile = document.getElementById('ghost-tile'); 
-
-        // --- Core Utility Functions ---
-
-        function calculateUnitSize() {
-            const rect = tilingGrid.getBoundingClientRect();
-            UNIT_PIXEL_SIZE = rect.width > 0 ? rect.width / GRID_SIZE : 50;
-        }
-
-        function createTileElement(size, isGhost = false) {
-            const tileElement = document.createElement('div');
-            // Re-calculate unit size before creating a tile
-            calculateUnitSize(); 
-            
-            tileElement.className = `${isGhost ? '' : 'placed-tile'} ${tileColors[size]}`;
-            tileElement.style.width = `${size * UNIT_PIXEL_SIZE}px`;
-            tileElement.style.height = `${size * UNIT_PIXEL_SIZE}px`;
-            tileElement.dataset.size = size;
-
-            const gridTemplate = `repeat(${size}, 1fr)`;
-            tileElement.style.setProperty('--tile-grid-template', gridTemplate);
-
-            // Add internal unit cells for visual grid lines
-            for (let i = 0; i < size * size; i++) {
-                const unitCell = document.createElement('div');
-                unitCell.className = 'tile-unit-cell';
-                tileElement.appendChild(unitCell);
-            }
-
-            return tileElement;
-        }
-
-        // --- History Management ---
-
-        /**
-         * Saves the current grid state to the history stack (x, y, size only).
-         */
-        function pushState() {
-            // Serialize placedTiles to a simple array of data objects
-            const serializableState = placedTiles.map(t => ({ x: t.x, y: t.y, size: t.size }));
-            history.push(serializableState); 
-
-            // Enforce max history limit
-            if (history.length > MAX_HISTORY) {
-                history.shift(); 
-            }
-            updateUndoButtonState();
-        }
-
-        /**
-         * Reverts the grid to the previous state from history.
-         */
-        function undoLastMove() {
-            if (history.length > 0) {
-                // Get the last state from history
-                const previousState = history.pop();
-
-                // Re-render the grid based on the historical state
-                rebuildGrid(previousState);
-                
-                updateStatus();
-            }
-            updateUndoButtonState();
-        }
-
-        /**
-         * Rebuilds the grid from a serialized state array.
-         * @param {Array} state - Array of {x, y, size} objects.
-         */
-        function rebuildGrid(state) {
-            // 1. Clear current tiles from DOM
-            placedTiles.forEach(t => t.element.remove());
-            placedTiles = [];
-
-            // 2. Re-create the DOM elements and the placedTiles array
-            state.forEach(tileData => {
-                const newTileElement = createTileElement(tileData.size, false);
-                finalizeTilePlacement(tileData.x, tileData.y, tileData.size, newTileElement);
-            });
-        }
-        
-        /**
-         * Enables or disables the undo button based on history.
-         */
-        function updateUndoButtonState() {
-            undoButton.disabled = history.length === 0;
-            if (history.length > 0) {
-                undoButton.classList.remove('bg-yellow-500/50');
-                undoButton.classList.add('bg-yellow-500');
-            } else {
-                 undoButton.classList.remove('bg-yellow-500');
-                undoButton.classList.add('bg-yellow-500/50');
-            }
-        }
-
-
-        // --- Tile Selection and UI Updates ---
-
-        function createTileOption(size) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'tile-option-wrapper';
-
-            const tile = document.createElement('div');
-            tile.className = `draggable-tile-source ${tileColors[size]}`;
-            // Fixed size for the source tiles
-            tile.style.width = `${50 * size / 2}px`; 
-            tile.style.height = `${50 * size / 2}px`;
-            tile.dataset.size = size;
-
-            const gridTemplate = `repeat(${size}, 1fr)`;
-            tile.style.setProperty('--tile-grid-template', gridTemplate);
-
-            for (let i = 0; i < size * size; i++) {
-                const unitCell = document.createElement('div');
-                unitCell.className = 'tile-unit-cell';
-                tile.appendChild(unitCell);
-            }
-            
-            const label = document.createElement('span');
-            label.className = 'text-lg font-medium text-gray-700';
-            label.textContent = `${size}x${size}`;
-            
-            wrapper.appendChild(tile);
-            wrapper.appendChild(label);
-
-            // Click event to SELECT the tile
-            tile.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevents drag start if it was a quick click
-                selectTileSize(size);
-            });
-            
-            // Mousedown event to START DRAG from source
-            tile.addEventListener('mousedown', (e) => startDragFromSource(e, size));
-
-            return wrapper;
-        }
-
-        function generateTileOptions() {
-            tileOptionsSource.innerHTML = '';
-            tileSizes.forEach(size => {
-                tileOptionsSource.appendChild(createTileOption(size));
-            });
-        }
-        
-        function selectTileSize(size) {
-            currentTileSize = size;
-            updateTileOptions(size);
-            updateGhostTileContent(size);
-            updateStatus();
-        }
-
-        function updateGhostTileContent(size) {
-            if (!size) {
-                ghostTile.style.display = 'none';
-                return;
-            }
-
-            // 1. Clear and populate the ghost tile
-            ghostTile.innerHTML = '';
-            const newGhostContent = createTileElement(size, true);
-            ghostTile.appendChild(newGhostContent);
-            
-            // 2. Set the ID and class
-            ghostTile.id = 'ghost-tile'; // Keep the ID
-            // Apply the base color class (which has no background, only border/shadow in CSS)
-            ghostTile.className = tileColors[size]; 
-            
-            // 3. Set dimensions using the calculated UNIT_PIXEL_SIZE
-            ghostTile.style.width = `${size * UNIT_PIXEL_SIZE}px`;
-            ghostTile.style.height = `${size * UNIT_PIXEL_SIZE}px`;
-            
-            // 4. Set internal grid template
-            const gridTemplate = `repeat(${size}, 1fr)`;
-            ghostTile.style.setProperty('--tile-grid-template', gridTemplate);
-        }
-
-
-        function updateTileOptions(selectedSize) {
-            document.querySelectorAll('.draggable-tile-source').forEach(tile => {
-                const wrapper = tile.closest('.tile-option-wrapper');
-                const size = parseInt(tile.dataset.size);
-
-                // Clear selection state
-                tile.classList.remove('tile-option-selected');
-
-                if (selectedSize !== null) {
-                    if (size === selectedSize) {
-                        tile.classList.add('tile-option-selected');
-                    } else {
-                        // Disable non-selected tiles once one is chosen
-                        wrapper.classList.add('tile-option-disabled');
-                        tile.style.pointerEvents = 'none';
-                    }
-                } else {
-                    wrapper.classList.remove('tile-option-disabled');
-                    tile.style.pointerEvents = 'auto';
-                }
-            });
-        }
-
-        function updateStatus() {
-            if (currentTileSize) {
-                const tileArea = currentTileSize * currentTileSize;
-                const totalUnits = GRID_SIZE * GRID_SIZE;
-                const totalAreaFilled = placedTiles.length * tileArea;
-                const isFactor = factorTiles.includes(currentTileSize);
-
-                const tileInUse = `<span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}`;
-                const tilesPlaced = `<span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}`;
-                
-                let baseMessage = `<p>${tileInUse}</p><p>${tilesPlaced}</p>`;
-                let nudgeMessage = '';
-                
-                // Nudge for being close
-                if (isFactor && totalAreaFilled / totalUnits >= 0.75 && placedTiles.length < (totalUnits / tileArea)) {
-                    nudgeMessage = '<p class="text-sm text-green-600 font-semibold">(You\'re close to finding the factor!)</p>';
-                }
-                
-                // Hint for non-factor tiles
-                const isNonFactor = nonFactorTiles.includes(currentTileSize);
-                if (isNonFactor && placedTiles.length >= 2) {
-                    nudgeMessage = '<p class="text-sm text-red-500 font-semibold">(Hint: This tile might not be a perfect fit. Try another size?)</p>';
-                }
-                
-                statusBar.classList.add('active');
-                statusMessageContent.innerHTML = baseMessage;
-                statusMessageContent.classList.remove('opacity-0', 'justify-between');
-                statusMessageContent.classList.add('space-x-6');
-
-                if (nudgeMessage) {
-                    const nudgeContainer = document.createElement('div');
-                    nudgeContainer.className = 'w-full text-sm text-left pt-1'; 
-                    nudgeContainer.innerHTML = nudgeMessage;
-                    statusMessageContent.appendChild(nudgeContainer);
-                }
-            } else {
-                statusBar.classList.remove('active');
-                statusMessageContent.innerHTML = '';
-                statusMessageContent.classList.add('opacity-0', 'justify-between');
-                statusMessageContent.classList.remove('space-x-6');
-                ghostTile.style.display = 'none'; // Ensure ghost is hidden when no tile is selected
-            }
-            updateUndoButtonState(); // Update undo state on status refresh
-        }
-
-        // --- GHOST TILE AND PLACEMENT LOGIC ---
-
-        let lastSnappedX = -1, lastSnappedY = -1;
-        
-        /**
-         * FIX: Ensures the ghost tile is only visible and snaps when over the grid,
-         * regardless of what is beneath the cursor (e.g., an existing placed tile).
-         */
-        function updateGhostTile(e) {
-            if (!currentTileSize || isDragging) {
-                ghostTile.style.display = 'none';
-                lastSnappedX = -1;
-                lastSnappedY = -1;
-                return;
-            }
-
-            const gridRect = tilingGrid.getBoundingClientRect();
-            
-            // Check if the cursor is within the grid's bounding box
-            const isOverGrid = (
-                e.clientX >= gridRect.left && e.clientX < gridRect.right &&
-                e.clientY >= gridRect.top && e.clientY < gridRect.bottom
-            );
-
-            if (isOverGrid) {
-                ghostTile.style.display = 'block';
-                
-                const relativeX = e.clientX - gridRect.left;
-                const relativeY = e.clientY - gridRect.top;
-
-                const unitX = Math.floor(relativeX / UNIT_PIXEL_SIZE);
-                const unitY = Math.floor(relativeY / UNIT_PIXEL_SIZE);
-
-                const snapX = unitX * UNIT_PIXEL_SIZE;
-                const snapY = unitY * UNIT_PIXEL_SIZE;
-
-                const outOfBounds = unitX < 0 || unitY < 0 || unitX + currentTileSize > GRID_SIZE || unitY + currentTileSize > GRID_SIZE;
-                const isOverlapped = checkOverlap(unitX, unitY, currentTileSize);
-
-                if (outOfBounds || isOverlapped) {
-                    ghostTile.classList.add('invalid');
-                    lastSnappedX = -1; 
-                    lastSnappedY = -1;
-                } else {
-                    ghostTile.classList.remove('invalid');
-                    lastSnappedX = unitX;
-                    lastSnappedY = unitY;
-                }
-                
-                // Always position the ghost snapped to the top-left of the calculated unit
-                // Position is fixed relative to the viewport, which is why we use gridRect.left/top
-                ghostTile.style.left = `${gridRect.left + snapX}px`;
-                ghostTile.style.top = `${gridRect.top + snapY}px`;
-
-            } else {
-                // Hide the ghost tile when outside the grid
-                ghostTile.style.display = 'none';
-                lastSnappedX = -1;
-                lastSnappedY = -1;
-            }
-        }
-        
-        // Placement handler triggered by click on the grid wrapper
-        function handlePlacementClick(e) {
-            // Do not allow placement if currently dragging a tile
-            if (!currentTileSize || isDragging) return;
-            
-            // Do not place if the click target is an already placed tile 
-            if (e.target.closest('.placed-tile')) return;
-
-            const isInvalid = ghostTile.classList.contains('invalid');
-            
-            if (isInvalid || lastSnappedX === -1) {
-                // Flash the grid wrapper for a moment to show placement failed
-                gridWrapper.style.borderColor = '#EF4444'; // Red
-                setTimeout(() => {
-                    gridWrapper.style.borderColor = '#374151'; // Original color
-                }, 200);
-                return; 
-            }
-            
-            // Push state before making the move
-            pushState();
-
-            // Create and finalize the new tile
-            const newTileElement = createTileElement(currentTileSize, false);
-            
-            // Finalize Placement using the last snapped valid coordinates
-            finalizeTilePlacement(lastSnappedX, lastSnappedY, currentTileSize, newTileElement);
-
-            checkWinCondition();
-        }
-
-        // --- Dragging Existing Tiles and Dragging from Source ---
-
-        function checkOverlap(x, y, size) {
-            return placedTiles.some(tile => {
-                // Check if tile boundaries intersect
-                const xOverlap = Math.max(0, Math.min(x + size, tile.x + tile.size) - Math.max(x, tile.x));
-                const yOverlap = Math.max(0, Math.min(y + size, tile.y + tile.size) - Math.max(y, tile.x));
-                return xOverlap > 0 && yOverlap > 0;
-            });
-        }
-        
-        // Handles drag start from the tile options box
-        function startDragFromSource(e, size) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            selectTileSize(size); // Select the tile immediately
-
-            currentDragTile = createTileElement(size, false);
-            currentDragTile.classList.add('dragging');
-            currentDragTile.style.position = 'absolute';
-            document.body.appendChild(currentDragTile);
-            
-            // Calculate offsets based on cursor position relative to the center of the tile
-            const tileRect = e.currentTarget.getBoundingClientRect();
-            const sourceTileSizeInPx = tileRect.width; // The visual size of the tile in the options box
-            const factor = sourceTileSizeInPx / (size * UNIT_PIXEL_SIZE); // Scaling factor of the source tile visual
-            
-            dragOffsetX = (e.clientX - tileRect.left) / factor;
-            dragOffsetY = (e.clientY - tileRect.top) / factor;
-            
-            isDragging = true;
-            dragOriginIsSource = true;
-            ghostTile.style.display = 'none'; // Hide ghost while dragging
-            
-            setupGlobalDragEvents();
-        }
-
-
-        // Existing placed tile drag start
-        function startDragFromBoard(e, tileData) {
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            
-            pushState(); // Save state before starting drag of an existing tile
-            
-            ghostTile.style.display = 'none'; 
-            
-            if (currentTileSize === null) {
-                 selectTileSize(tileData.size);
-            }
-
-            // Temporarily remove the tile data from the array (it will be re-added on drop)
-            placedTiles = placedTiles.filter(t => t !== tileData);
-            
-            calculateUnitSize();
-
-            // Move tile from grid to body for global drag
-            const rect = tileData.element.getBoundingClientRect();
-            tileData.element.remove();
-            document.body.appendChild(tileData.element);
-            
-            currentDragTile = tileData.element;
-            currentDragTile.classList.add('dragging');
-            currentDragTile.style.position = 'absolute';
-            
-            dragOffsetX = e.clientX - rect.left;
-            dragOffsetY = e.clientY - rect.top;
-            
-            isDragging = true;
-            dragOriginIsSource = false; // Dragging an existing tile
-            setupGlobalDragEvents();
-        }
-
-        function onMouseMove(e) {
-            if (isDragging && currentDragTile) {
-                // Calculate position considering the drag offset (mouse minus offset)
-                currentDragTile.style.left = `${e.clientX - dragOffsetX}px`;
-                currentDragTile.style.top = `${e.clientY - dragOffsetY}px`;
-                
-                // --- Snap/Validation Logic for the dragged tile ---
-                const size = parseInt(currentDragTile.dataset.size);
-                const gridRect = tilingGrid.getBoundingClientRect();
-
-                // Check if the current position is over the grid
-                if (e.clientX > gridRect.left && e.clientX < gridRect.right && 
-                    e.clientY > gridRect.top && e.clientY < gridRect.bottom) {
-                    
-                    const relativeX = e.clientX - gridRect.left;
-                    const relativeY = e.clientY - gridRect.top;
-
-                    // Calculate unit coordinates based on the top-left corner (compensate for offset)
-                    const unitX = Math.floor((e.clientX - dragOffsetX - gridRect.left) / UNIT_PIXEL_SIZE);
-                    const unitY = Math.floor((e.clientY - dragOffsetY - gridRect.top) / UNIT_PIXEL_SIZE);
-
-                    const outOfBounds = unitX < 0 || unitY < 0 || unitX + size > GRID_SIZE || unitY + size > GRID_SIZE;
-                    const isOverlapped = checkOverlap(unitX, unitY, size);
-
-                    if (outOfBounds || isOverlapped) {
-                        currentDragTile.classList.add('invalid');
-                    } else {
-                        currentDragTile.classList.remove('invalid');
-                    }
-                } else {
-                     currentDragTile.classList.add('invalid'); // Invalid if dropped outside the grid
-                }
-                
-            } else {
-                updateGhostTile(e);
-            }
-        }
-
-        function onMouseUp(e) {
-            if (!isDragging || !currentDragTile) return;
-
-            isDragging = false;
-            currentDragTile.classList.remove('dragging');
-            
-            const size = parseInt(currentDragTile.dataset.size);
-            
-            const gridRect = gridWrapper.getBoundingClientRect();
-            const tileRect = currentDragTile.getBoundingClientRect();
-
-            // Calculate target position in grid units
-            const targetX = tileRect.left - gridRect.left;
-            const targetY = tileRect.top - gridRect.top;
-
-            // Snap coordinates to the nearest unit
-            const unitX = Math.round(targetX / UNIT_PIXEL_SIZE);
-            const unitY = Math.round(targetY / UNIT_PIXEL_SIZE);
-            
-            const isInsideGridBounds = (
-                unitX >= 0 && unitY >= 0 && 
-                unitX + size <= GRID_SIZE && unitY + size <= GRID_SIZE
-            );
-            
-            // Check for overlap (important if the drag was a move)
-            const isOverlapped = checkOverlap(unitX, unitY, size);
-            
-            const placementSuccessful = isInsideGridBounds && !isOverlapped;
-            
-            if (placementSuccessful) {
-                // --- Successful Placement/Move ---
-                if (dragOriginIsSource) {
-                    pushState();
-                }
-
-                finalizeTilePlacement(unitX, unitY, size, currentDragTile);
-                if (dragOriginIsSource) {
-                     checkWinCondition();
-                }
-
-            } else {
-                // --- Placement Failed (Dropped off board or overlapped) ---
-                currentDragTile.remove();
-
-                if (!dragOriginIsSource) {
-                    // If it was a drag from the board, undo the move to restore the tile to its original position
-                    undoLastMove(); 
-                }
-            }
-
-            currentDragTile = null;
-            dragOriginIsSource = false;
-            removeGlobalDragEvents();
-            updateStatus();
-        }
-        
-        function finalizeTilePlacement(x, y, size, element) {
-            element.remove(); 
-            gridWrapper.appendChild(element); 
-            
-            element.style.left = `${x * UNIT_PIXEL_SIZE}px`;
-            element.style.top = `${y * UNIT_PIXEL_SIZE}px`;
-            
-            element.style.position = 'absolute';
-            
-            const tileData = { x, y, size, element };
-            placedTiles.push(tileData);
-            
-            // Re-bind the mousedown listener for dragging the placed tile
-            element.removeEventListener('mousedown', element.dragListener); 
-            element.dragListener = (e) => startDragFromBoard(e, tileData);
-            element.addEventListener('mousedown', element.dragListener);
-            
-            updateStatus();
-        }
-        
-        function checkWinCondition() {
-            const totalUnits = GRID_SIZE * GRID_SIZE; 
-            const tileArea = currentTileSize * currentTileSize;
-            
-            if (factorTiles.includes(currentTileSize) && (totalUnits % tileArea === 0)) {
-                 const requiredTiles = totalUnits / tileArea;
-                if (placedTiles.length === requiredTiles) {
-                    gridWrapper.classList.add('pulse-win'); 
-                    resetButton.disabled = true;
-                    undoButton.disabled = true; 
-
-                    setTimeout(() => {
-                        gridWrapper.classList.remove('pulse-win'); 
-                        showSummaryDialog(true);
-                    }, 1000); 
-                }
-            } 
-        }
-
-        function setupGlobalDragEvents() {
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        }
-
-        function removeGlobalDragEvents() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
-
-        // --- Dialog and Summary ---
-
-        function hideDialog() {
-            gridWrapper.classList.remove('pulse-win'); 
-            resetButton.disabled = false;
-            updateUndoButtonState(); 
-
-            dialogContentArea.classList.add('scale-90', 'opacity-0');
-            setTimeout(() => {
-                gameDialog.classList.add('hidden');
-            }, 300);
-        }
-
-        function createDialogTileVisual(size) {
-            const tileColor = tileColors[size];
-            const tileVisual = document.createElement('div');
-            tileVisual.className = `dialog-tile-visualization ${tileColor} mx-auto`;
-            
-            const gridTemplate = `repeat(${size}, 1fr)`;
-            tileVisual.style.setProperty('--tile-grid-template', gridTemplate);
-
-            for (let i = 0; i < size * size; i++) {
-                const unitCell = document.createElement('div');
-                unitCell.className = 'tile-unit-cell';
-                tileVisual.appendChild(unitCell);
-            }
-            return tileVisual.outerHTML;
-        }
-
-        function showSummaryDialog(success, sizeAttempted = null) {
-            gridWrapper.classList.remove('pulse-win'); 
-            resetButton.disabled = false; 
-
-            dialogContentArea.classList.add('scale-90', 'opacity-0');
-            gameDialog.classList.remove('hidden');
-
-            const size = currentTileSize || sizeAttempted;
-            const tileText = `${size}x${size}`;
-            
-            document.getElementById('summary-content').innerHTML = '';
-            document.getElementById('dialog-close-button').style.display = 'none'; 
-
-            if (success) {
-                const tileVisualHTML = createDialogTileVisual(size);
-
-                simpleMessageContainer.innerHTML = `
-                    <p class="success-title">Amazing Job!</p>
-                    
-                    <div class="flex flex-col items-center gap-4 py-4 border-y border-green-200">
-                        <!-- Tile Visualization -->
-                        ${tileVisualHTML}
-                        <!-- Large Factor Number -->
-                        <span class="factor-display">${size}</span>
-                        <p class="text-xl font-semibold text-gray-700">is a factor of 12!</p>
-                    </div>
-
-                    <p class="success-message text-xl mt-4">You perfectly tiled the $12 \\times 12$ square using the ${tileText} tile.</p>
-                `;
-
-                document.getElementById('summary-content').innerHTML = `
-                    <div class="flex gap-4 pt-4"> 
-                        <button id="btn-back" class="flex-1 px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150">
-                            Back to View
-                        </button>
-                        <button id="btn-next" class="flex-1 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150">
-                            Next
-                        </button>
-                    </div>
-                `;
-                
-                setTimeout(() => {
-                    document.getElementById('btn-back').onclick = hideDialog;
-                    document.getElementById('btn-next').onclick = () => {
-                        hideDialog();
-                        resetGame(true);
-                    };
-                }, 10);
-
-            } else {
-                simpleMessageContainer.innerHTML = `
-                    <h3 class="text-2xl font-bold text-gray-800 mb-2">Factors of 12: Conclusion</h3>
-                    <p class="text-gray-600">You were attempting to tile with ${tileText} tiles. Since the $12 \\times 12$ square could not be perfectly tiled, let's look at the math!</p>
-                `;
-
-                document.getElementById('summary-content').innerHTML = `
-                    <h4 class="text-lg font-semibold text-indigo-700">Mathematical Conclusion:</h4>
-                    <p class="text-gray-700">A square tile $N \\times N$ can only tile an $M \\times M$ square perfectly if $N$ is a factor of $M$.</p>
-                    <ul class="list-disc list-inside text-gray-700 space-y-2 ml-4">
-                        <li>**Factors of 12 (Perfect Fit):** Square tiles with side lengths **2, 3, 4, and 6**.</li>
-                        <li>**Non-Factors (Leaves Remainder):** Square tiles with side lengths **5, 7, and 8**. (e.g., $12 \\pmod {5} = 2$ units left over)</li>
-                    </ul>
-                `;
-                
-                document.getElementById('dialog-close-button').style.display = 'block';
-                document.getElementById('dialog-close-button').textContent = 'Start New Attempt';
-                document.getElementById('dialog-close-button').onclick = () => {
-                    hideDialog();
-                    resetGame(true);
-                };
-            }
-
-            
-            setTimeout(() => {
-                dialogContentArea.classList.remove('scale-90', 'opacity-0');
-                renderMath();
-            }, 10);
-        }
-
-        function resetGame(skipSummaryCheck = false) {
-            const wasNonFactorAttempt = !skipSummaryCheck && currentTileSize !== null && nonFactorTiles.includes(currentTileSize) && placedTiles.length > 0;
-
-            const sizeAttempted = currentTileSize;
-            
-            currentTileSize = null;
-            placedTiles.forEach(t => t.element.remove());
-            placedTiles = [];
-            history = []; // Clear history on full reset
-            
-            initGrid();
-            generateTileOptions();
-            updateTileOptions(null);
-            updateGhostTileContent(null); // Ensure ghost is gone
-            updateStatus();
-            
-            if (wasNonFactorAttempt) {
-                showSummaryDialog(false, sizeAttempted);
-            }
-        }
-        
-        window.addEventListener('resize', () => {
-            calculateUnitSize(); 
-            placedTiles.forEach(tileData => {
-                 // Update placed tile dimensions
-                 tileData.element.style.width = `${tileData.size * UNIT_PIXEL_SIZE}px`;
-                 tileData.element.style.height = `${tileData.size * UNIT_PIXEL_SIZE}px`;
-                 tileData.element.style.left = `${tileData.x * UNIT_PIXEL_SIZE}px`;
-                 tileData.element.style.top = `${tileData.y * UNIT_PIXEL_SIZE}px`;
-            });
-            // Update ghost tile dimensions
-            if (currentTileSize) {
-                updateGhostTileContent(currentTileSize);
-            }
-            renderMath();
-        });
-
-
-        // --- Entry Point ---
-        window.onload = () => {
-            initGrid();
-            generateTileOptions();
-            updateStatus();
-            resetButton.addEventListener('click', () => resetGame(false)); // Check summary on reset
-            undoButton.addEventListener('click', undoLastMove); // Bind undo function
-            updateUndoButtonState(); // Set initial state
-            
-            // Global mouse events for drag and ghost tile tracking
-            document.addEventListener('mousemove', onMouseMove); 
-            document.addEventListener('mouseup', onMouseUp); // Crucial for dropping
-            
-            gridWrapper.addEventListener('click', handlePlacementClick);
-            
-            renderMath();
-        };
-        
-        function initGrid() {
-            calculateUnitSize();
-
-            Array.from(gridWrapper.querySelectorAll('.placed-tile')).forEach(el => el.remove());
-
-            if (tilingGrid.children.length === 0) {
-                 for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'grid-cell';
-                    tilingGrid.appendChild(cell);
-                }
-            }
-        }
-    </script>
-
+    <div class="max-w-6xl w-full">
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-gray-800 mb-2">Factors of 12</h1>
+        
+                <p id="instruction-text" class="text-xl text-gray-600 mb-2 font-semibold">
+            **Select a tile size, then click repeatedly on the $12 \times 12$ grid to place tiles continuously.**
+        </p>
+
+                <div id="status-bar-wrapper" class="lg:w-[600px] mx-auto lg:mx-0">
+            <div id="status-bar" class="text-lg text-gray-800 font-medium rounded-md">
+                <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full gap-6"></div>
+            </div>
+        </div>
+
+                <div class="flex flex-col lg:flex-row gap-8">
+            
+                        <div class="flex flex-col flex-shrink-0 items-center">
+                                  <div id="grid-wrapper" class="relative w-full lg:w-[600px] lg:h-[600px] shadow-2xl overflow-hidden bg-gray-100 aspect-square">
+                    <div id="tiling-grid" class="grid-container w-full h-full">
+                                            </div>
+                </div>
+                
+                                <div class="mt-4 flex space-x-4">
+                                        <button id="undo-button" class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold transition duration-200 hover:bg-yellow-600 shadow-md text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" transform="scale(-1, 1) translate(-20, 0) rotate(90 10 10)"/>
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-7-9a1 1 0 011-1h2.586L7.293 8.293a1 1 0 011.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z" clip-rule="evenodd" transform="translate(0, 0) scale(1, -1) rotate(-90 10 10)"/>
+                        </svg>
+                        Undo Last Move
+                    </button>
+
+                                        <button id="reset-button" class="px-4 py-2 bg-red-200 text-black rounded-lg font-semibold transition duration-200 hover:bg-red-300 shadow-md text-base">
+                        Reset Board
+                    </button>
+                </div>
+            </div>
+
+                        <div class="flex-grow space-y-6">
+                
+                                <div id="tile-options-container" class="bg-white p-6 shadow-lg">
+                                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Click to Select & Begin Tiling (&larr;)</h2>
+                    
+                                        <div id="tile-options" class="flex flex-wrap gap-4 justify-center lg:grid lg:grid-cols-2 lg:gap-x-12 lg:gap-y-6">
+                                            </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    
+        <div id="ghost-tile"></div>
+
+        <div id="game-dialog" class="dialog fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex items-center justify-center hidden">
+        <div class="bg-white p-8 shadow-2xl max-w-lg w-full transform scale-90 opacity-0" id="dialog-content-area">
+                        <div id="simple-message-container" class="space-y-4 text-center">
+                            </div>
+            
+                        <div id="summary-content" class="space-y-4 pt-6"></div>
+            
+            <button id="dialog-close-button" class="mt-6 w-full px-4 py-2 bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition duration-150">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        
+        function renderMath() {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false}
+                    ]
+                });
+            }
+        }
+        
+        const GRID_SIZE = 12; // 12x12 grid
+        let UNIT_PIXEL_SIZE = 50; 
+        
+        const tileSizes = [2, 3, 4, 5, 6, 7, 8];
+        const factorTiles = [2, 3, 4, 6];
+        const nonFactorTiles = [5, 7, 8];
+        const tileColors = {
+            2: 'bg-green-500', 3: 'bg-orange-500', 4: 'bg-blue-500', 5: 'bg-yellow-500',
+            6: 'bg-red-500', 7: 'bg-indigo-300', 8: 'bg-pink-300'
+        };
+
+        let currentTileSize = null;
+        // Stores {x, y, size, element} for easy DOM and physics access
+        let placedTiles = []; 
+        // Stores serializable history: [{ x, y, size }]
+        let history = []; 
+        const MAX_HISTORY = 30;
+
+        let isDragging = false; // True when moving an existing tile OR dragging from source (removed)
+        let currentDragTile = null; // The element being dragged (placed tile)
+        let dragOffsetX, dragOffsetY; // Offset from mouse to tile corner
+
+        // DOM Elements
+        const gridWrapper = document.getElementById('grid-wrapper');
+        const tilingGrid = document.getElementById('tiling-grid');
+        const tileOptionsContainer = document.getElementById('tile-options-container');
+        const tileOptionsSource = document.getElementById('tile-options'); 
+        const statusBar = document.getElementById('status-bar');
+        const statusMessageContent = document.getElementById('status-message-content');
+        const resetButton = document.getElementById('reset-button');
+        const undoButton = document.getElementById('undo-button'); 
+        const gameDialog = document.getElementById('game-dialog');
+        const dialogContentArea = document.getElementById('dialog-content-area');
+        const simpleMessageContainer = document.getElementById('simple-message-container');
+        const ghostTile = document.getElementById('ghost-tile'); 
+
+        // --- Core Utility Functions ---
+
+        function calculateUnitSize() {
+            const rect = tilingGrid.getBoundingClientRect();
+            UNIT_PIXEL_SIZE = rect.width > 0 ? rect.width / GRID_SIZE : 50;
+        }
+
+        function createTileElement(size, isGhost = false) {
+            const tileElement = document.createElement('div');
+            // Re-calculate unit size before creating a tile
+            calculateUnitSize(); 
+            
+            // For the ghost tile, we only want the grid lines and dashed border/shadow, not the background color class initially
+            tileElement.className = `${isGhost ? '' : 'placed-tile'} ${isGhost ? '' : tileColors[size]}`;
+            tileElement.style.width = `${size * UNIT_PIXEL_SIZE}px`;
+            tileElement.style.height = `${size * UNIT_PIXEL_SIZE}px`;
+            tileElement.dataset.size = size;
+
+            const gridTemplate = `repeat(${size}, 1fr)`;
+            tileElement.style.setProperty('--tile-grid-template', gridTemplate);
+
+            // Add internal unit cells for visual grid lines
+            for (let i = 0; i < size * size; i++) {
+                const unitCell = document.createElement('div');
+                // Use 'tile-unit-cell' for internal grid lines on both placed and ghost tiles
+                unitCell.className = 'tile-unit-cell';
+                tileElement.appendChild(unitCell);
+            }
+
+            return tileElement;
+        }
+
+        function initGrid() {
+            // Clear existing cells, if any (although the grid is mostly for background visual now)
+            tilingGrid.innerHTML = '';
+            // Generate grid cells for backdrop
+            for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                tilingGrid.appendChild(cell);
+            }
+            
+            // Attach the event listener to the grid wrapper for continuous placement
+            gridWrapper.addEventListener('click', handlePlacementClick);
+            gridWrapper.addEventListener('mousemove', updateGhostTile);
+            
+            generateTileOptions();
+            resetBoardState();
+        }
+
+        function resetBoardState() {
+            rebuildGrid([]); // Clears all placed tiles
+            history = [];    // Clear history
+            currentTileSize = null; // Clear selected tile
+            updateTileOptions(null); 
+            updateGhostTileContent(null); // Hide ghost tile
+            updateStatus(); 
+            hideDialog();
+        }
+
+        function checkOverlap(x, y, size, ignoreElement = null) {
+            for (const tile of placedTiles) {
+                if (tile.element === ignoreElement) continue; // Ignore the tile we are moving
+
+                // Standard AABB (Axis-Aligned Bounding Box) collision detection
+                // Collision occurs if the tile is NOT fully outside on all axes
+                const collision = (
+                    x < tile.x + tile.size && // left edge of new tile is left of right edge of existing tile
+                    x + size > tile.x &&      // right edge of new tile is right of left edge of existing tile
+                    y < tile.y + tile.size && // top edge of new tile is above bottom edge of existing tile
+                    y + size > tile.y      // bottom edge of new tile is below top edge of existing tile
+                );
+
+                if (collision) return true;
+            }
+            return false;
+        }
+
+        /**
+         * Finalizes a tile placement and adds it to the placedTiles list.
+         * @param {number} x - Grid X coordinate (0-11).
+         * @param {number} y - Grid Y coordinate (0-11).
+         * @param {number} size - Tile size.
+         * @param {HTMLElement} tileElement - The DOM element.
+         * @param {boolean} pushToHistory - Whether to record this move. Defaults to true.
+         */
+        function finalizeTilePlacement(x, y, size, tileElement, pushToHistory = true) {
+            // 1. Set DOM position
+            tileElement.style.left = `${x * UNIT_PIXEL_SIZE}px`;
+            tileElement.style.top = `${y * UNIT_PIXEL_SIZE}px`;
+
+            // 2. Add to DOM if not already placed
+            if (!tileElement.parentNode) {
+                gridWrapper.appendChild(tileElement);
+                // Add mousedown listener for dragging existing tiles
+                tileElement.addEventListener('mousedown', startDragPlacedTile);
+                // Ensure the tile is above the grid but below the ghost
+                tileElement.style.zIndex = 10;
+            }
+
+            // 3. Update internal array
+            const existingTileData = placedTiles.find(t => t.element === tileElement);
+            if (existingTileData) {
+                existingTileData.x = x;
+                existingTileData.y = y;
+                // Size never changes, but ensure data is correct
+                existingTileData.size = size;
+            } else {
+                placedTiles.push({ x, y, size, element: tileElement });
+            }
+
+            // 4. Save state
+            if (pushToHistory) {
+                pushState();
+            }
+            updateStatus();
+        }
+        
+        // --- History Management ---
+
+        /**
+         * Saves the current grid state to the history stack (x, y, size only).
+         */
+        function pushState() {
+            // Serialize placedTiles to a simple array of data objects
+            const serializableState = placedTiles.map(t => ({ x: t.x, y: t.y, size: t.size }));
+            // Only push if the state is different from the last one (prevents accidental pushes)
+            if (history.length === 0 || JSON.stringify(history[history.length - 1]) !== JSON.stringify(serializableState)) {
+                history.push(serializableState); 
+
+                // Enforce max history limit
+                if (history.length > MAX_HISTORY) {
+                    history.shift(); 
+                }
+            }
+            updateUndoButtonState();
+        }
+
+        /**
+         * Reverts the grid to the previous state from history.
+         */
+        function undoLastMove() {
+            if (history.length > 0) {
+                // Pop the *current* state (the one we want to undo)
+                history.pop();
+                
+                // Get the state *before* the last move
+                const previousState = history.length > 0 ? history[history.length - 1] : [];
+
+                // Re-render the grid based on the historical state
+                rebuildGrid(previousState);
+                
+                updateStatus();
+            }
+            updateUndoButtonState();
+        }
+
+        /**
+         * Rebuilds the grid from a serialized state array.
+         * @param {Array} state - Array of {x, y, size} objects.
+         */
+        function rebuildGrid(state) {
+            // 1. Clear current tiles from DOM
+            placedTiles.forEach(t => t.element.remove());
+            placedTiles = [];
+
+            // 2. Re-create the DOM elements and the placedTiles array
+            state.forEach(tileData => {
+                const newTileElement = createTileElement(tileData.size, false);
+                // Note: We don't push state here because we are loading from history
+                finalizeTilePlacement(tileData.x, tileData.y, tileData.size, newTileElement, false); 
+            });
+        }
+        
+        /**
+         * Enables or disables the undo button based on history.
+         */
+        function updateUndoButtonState() {
+            // History check should be against length > 0, because the first state is pushed on first move
+            undoButton.disabled = history.length <= 0;
+            if (history.length > 0) {
+                undoButton.classList.remove('bg-yellow-500/50');
+                undoButton.classList.add('bg-yellow-500');
+            } else {
+                 undoButton.classList.remove('bg-yellow-500');
+                undoButton.classList.add('bg-yellow-500/50');
+            }
+        }
+
+
+        // --- Tile Selection and UI Updates ---
+
+        function createTileOption(size) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tile-option-wrapper';
+
+            const tile = document.createElement('div');
+            tile.className = `draggable-tile-source ${tileColors[size]}`;
+            // Fixed size for the source tiles
+            tile.style.width = `${50 * size / 2}px`; 
+            tile.style.height = `${50 * size / 2}px`;
+            tile.dataset.size = size;
+
+            const gridTemplate = `repeat(${size}, 1fr)`;
+            tile.style.setProperty('--tile-grid-template', gridTemplate);
+
+            for (let i = 0; i < size * size; i++) {
+                const unitCell = document.createElement('div');
+                unitCell.className = 'tile-unit-cell';
+                tile.appendChild(unitCell);
+            }
+            
+            const label = document.createElement('span');
+            label.className = 'text-lg font-medium text-gray-700';
+            label.textContent = `${size}x${size}`;
+            
+            wrapper.appendChild(tile);
+            wrapper.appendChild(label);
+
+            // Click event to SELECT the tile (This now enables the ghost tile for placement)
+            tile.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                selectTileSize(size);
+            });
+            
+            // No more mousedown event for dragging from source. Just click to select.
+
+            return wrapper;
+        }
+
+        function generateTileOptions() {
+            tileOptionsSource.innerHTML = '';
+            tileSizes.forEach(size => {
+                tileOptionsSource.appendChild(createTileOption(size));
+            });
+        }
+        
+        function selectTileSize(size) {
+            // If the same tile is clicked, deselect it (toggle)
+            if (currentTileSize === size) {
+                currentTileSize = null;
+            } else {
+                currentTileSize = size;
+            }
+            updateTileOptions(currentTileSize);
+            updateGhostTileContent(currentTileSize);
+            updateStatus();
+        }
+
+        function updateGhostTileContent(size) {
+            calculateUnitSize(); // Ensure unit size is current
+
+            if (!size) {
+                ghostTile.style.display = 'none';
+                return;
+            }
+
+            // 1. Clear and populate the ghost tile
+            ghostTile.innerHTML = '';
+            // Pass size to createTileElement with isGhost=true for correct internal grid
+            const newGhostContent = createTileElement(size, true); 
+            ghostTile.appendChild(newGhostContent);
+            
+            // 2. Set the ID and class
+            ghostTile.id = 'ghost-tile'; // Keep the ID
+            // Apply the base color class (which has no background, only border/shadow in CSS)
+            ghostTile.className = tileColors[size]; 
+            
+            // 3. Set dimensions using the calculated UNIT_PIXEL_SIZE
+            ghostTile.style.width = `${size * UNIT_PIXEL_SIZE}px`;
+            ghostTile.style.height = `${size * UNIT_PIXEL_SIZE}px`;
+            
+            // 4. Set internal grid template
+            const gridTemplate = `repeat(${size}, 1fr)`;
+            ghostTile.style.setProperty('--tile-grid-template', gridTemplate);
+        }
+
+
+        function updateTileOptions(selectedSize) {
+            document.querySelectorAll('.draggable-tile-source').forEach(tile => {
+                const wrapper = tile.closest('.tile-option-wrapper');
+                const size = parseInt(tile.dataset.size);
+
+                // Clear selection state
+                tile.classList.remove('tile-option-selected');
+
+                if (selectedSize !== null) {
+                    if (size === selectedSize) {
+                        tile.classList.add('tile-option-selected');
+                        wrapper.classList.remove('tile-option-disabled'); // Selected tile is enabled
+                        tile.style.pointerEvents = 'auto';
+                    } else {
+                        // Disable non-selected tiles once one is chosen
+                        wrapper.classList.add('tile-option-disabled');
+                        tile.style.pointerEvents = 'none';
+                    }
+                } else {
+                    wrapper.classList.remove('tile-option-disabled');
+                    tile.style.pointerEvents = 'auto';
+                }
+            });
+        }
+
+        function updateStatus() {
+            if (currentTileSize) {
+                const tileArea = currentTileSize * currentTileSize;
+                const totalUnits = GRID_SIZE * GRID_SIZE;
+                const totalAreaFilled = placedTiles.length * tileArea;
+                const isFactor = factorTiles.includes(currentTileSize);
+
+                const tileInUse = `<span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}`;
+                const tilesPlaced = `<span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}`;
+                
+                let baseMessage = `<p class="flex justify-between w-full">${tileInUse} ${tilesPlaced}</p>`;
+                let nudgeMessage = '';
+                
+                // Nudge for being close
+                if (isFactor && totalAreaFilled / totalUnits >= 0.75 && placedTiles.length < (totalUnits / tileArea)) {
+                    nudgeMessage = '<p class="text-sm text-green-600 font-semibold text-center mt-1">(You\'re close to finding the factor!)</p>';
+                }
+                
+                // Hint for non-factor tiles
+                const isNonFactor = nonFactorTiles.includes(currentTileSize);
+                if (isNonFactor && placedTiles.length >= 2) {
+                    nudgeMessage = '<p class="text-sm text-red-500 font-semibold text-center mt-1">(Hint: This tile might not be a perfect fit. Try another size?)</p>';
+                }
+                
+                statusBar.classList.add('active');
+                statusMessageContent.innerHTML = baseMessage;
+                statusMessageContent.classList.remove('opacity-0', 'justify-between');
+                statusMessageContent.classList.add('flex-col', 'items-start'); // Use flex-col for stacked messages
+
+                if (nudgeMessage) {
+                    statusMessageContent.innerHTML += nudgeMessage;
+                }
+                statusMessageContent.style.opacity = 1; // Explicitly set opacity
+            } else {
+                statusBar.classList.remove('active');
+                statusMessageContent.innerHTML = '';
+                statusMessageContent.style.opacity = 0; // Explicitly set opacity to 0 when inactive
+            }
+            checkWinCondition(); // Also check win condition on status update
+            updateUndoButtonState(); // Update undo state on status refresh
+        }
+
+        function checkWinCondition() {
+            if (!currentTileSize) return false;
+            
+            const tileArea = currentTileSize * currentTileSize;
+            const totalGridArea = GRID_SIZE * GRID_SIZE;
+            const requiredTiles = totalGridArea / tileArea;
+            
+            // Check if the number of tiles is mathematically correct AND if all cells are covered
+            if (placedTiles.length === requiredTiles && totalGridArea % tileArea === 0) {
+                
+                // Perform a rigorous check to ensure no overlaps and all cells are covered.
+                const coveredCells = new Array(totalGridArea).fill(false);
+                let isPerfectlyCovered = true;
+                
+                for(const tile of placedTiles) {
+                    for (let dx = 0; dx < tile.size; dx++) {
+                        for (let dy = 0; dy < tile.size; dy++) {
+                            const index = (tile.y + dy) * GRID_SIZE + (tile.x + dx);
+                            if (index >= totalGridArea || coveredCells[index]) {
+                                // Overlap or out of bounds (shouldn't happen with placement check, but good to check)
+                                isPerfectlyCovered = false;
+                                break;
+                            }
+                            coveredCells[index] = true;
+                        }
+                        if (!isPerfectlyCovered) break;
+                    }
+                    if (!isPerfectlyCovered) break;
+                }
+                
+                if (isPerfectlyCovered) {
+                    showSuccessDialog();
+                    // Optionally disable placement after winning
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // --- Dragging of Existing Tiles ---
+
+        function startDragPlacedTile(e) {
+            e.preventDefault();
+            currentDragTile = e.currentTarget;
+            
+            // Find the tile data object
+            const tileData = placedTiles.find(t => t.element === currentDragTile);
+            if (!tileData) return;
+            
+            // Hide ghost tile while dragging a placed tile
+            ghostTile.style.display = 'none';
+
+            // Calculate offset
+            const rect = currentDragTile.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+
+            currentDragTile.classList.add('dragging');
+            isDragging = true;
+            
+            window.addEventListener('mousemove', dragMove);
+            window.addEventListener('mouseup', dragEnd);
+        }
+
+        function dragMove(e) {
+            if (!isDragging || !currentDragTile) return;
+
+            // Move the tile visually (free movement)
+            currentDragTile.style.left = `${e.clientX - dragOffsetX - gridWrapper.getBoundingClientRect().left}px`;
+            currentDragTile.style.top = `${e.clientY - dragOffsetY - gridWrapper.getBoundingClientRect().top}px`;
+        }
+
+        function dragEnd(e) {
+            if (!isDragging || !currentDragTile) return;
+
+            currentDragTile.classList.remove('dragging');
+            
+            const gridRect = tilingGrid.getBoundingClientRect();
+            const tileData = placedTiles.find(t => t.element === currentDragTile);
+            const size = parseInt(currentDragTile.dataset.size);
+            
+            // Calculate new snapped position
+            const relativeX = e.clientX - gridRect.left - dragOffsetX;
+            const relativeY = e.clientY - gridRect.top - dragOffsetY;
+            
+            const unitX = Math.round(relativeX / UNIT_PIXEL_SIZE);
+            const unitY = Math.round(relativeY / UNIT_PIXEL_SIZE);
+            
+            // Check for bounds and overlap
+            const outOfBounds = unitX < 0 || unitY < 0 || unitX + size > GRID_SIZE || unitY + size > GRID_SIZE;
+            const isOverlapped = checkOverlap(unitX, unitY, size, currentDragTile);
+
+            if (outOfBounds || isOverlapped) {
+                // If invalid, return the tile to its old position
+                if (tileData) {
+                    finalizeTilePlacement(tileData.x, tileData.y, size, currentDragTile, false);
+                } else {
+                    // Should not happen for a placed tile, but just in case
+                    currentDragTile.remove();
+                }
+            } else {
+                // If valid, finalize the move
+                finalizeTilePlacement(unitX, unitY, size, currentDragTile);
+            }
+
+            currentDragTile = null;
+            isDragging = false;
+            
+            window.removeEventListener('mousemove', dragMove);
+            window.removeEventListener('mouseup', dragEnd);
+            
+            // Ensure ghost tile is visible again if a tile size is selected
+            if (currentTileSize) {
+                updateGhostTile(e);
+            }
+        }
+
+        // --- GHOST TILE AND CONTINUOUS PLACEMENT LOGIC (Updated) ---
+
+        let lastSnappedX = -1, lastSnappedY = -1;
+        
+        /**
+         * Updates the ghost tile's position based on the cursor and grid.
+         */
+        function updateGhostTile(e) {
+            // Only show ghost if a tile is selected AND not dragging a tile already
+            if (!currentTileSize || isDragging) {
+                ghostTile.style.display = 'none';
+                lastSnappedX = -1;
+                lastSnappedY = -1;
+                return;
+            }
+
+            const gridRect = tilingGrid.getBoundingClientRect();
+            
+            // Check if the cursor is within the grid's bounding box
+            const isOverGrid = (
+                e.clientX >= gridRect.left && e.clientX < gridRect.right &&
+                e.clientY >= gridRect.top && e.clientY < gridRect.bottom
+            );
+
+            if (isOverGrid) {
+                ghostTile.style.display = 'block';
+                
+                // Calculate position relative to the grid top-left corner
+                const relativeX = e.clientX - gridRect.left;
+                const relativeY = e.clientY - gridRect.top;
+
+                // Determine the snapped grid unit coordinates (0-11)
+                const unitX = Math.floor(relativeX / UNIT_PIXEL_SIZE);
+                const unitY = Math.floor(relativeY / UNIT_PIXEL_SIZE);
+
+                // Determine the pixel position of the top-left corner of the snapped unit
+                const snapX = unitX * UNIT_PIXEL_SIZE;
+                const snapY = unitY * UNIT_PIXEL_SIZE;
+
+                const outOfBounds = unitX < 0 || unitY < 0 || unitX + currentTileSize > GRID_SIZE || unitY + currentTileSize > GRID_SIZE;
+                const isOverlapped = checkOverlap(unitX, unitY, currentTileSize);
+
+                if (outOfBounds || isOverlapped) {
+                    ghostTile.classList.add('invalid');
+                    lastSnappedX = -1; 
+                    lastSnappedY = -1;
+                } else {
+                    ghostTile.classList.remove('invalid');
+                    // Store the valid grid coordinates
+                    lastSnappedX = unitX;
+                    lastSnappedY = unitY;
+                }
+                
+                // Position the ghost using FIXED coordinates relative to the viewport
+                ghostTile.style.left = `${gridRect.left + snapX}px`;
+                ghostTile.style.top = `${gridRect.top + snapY}px`;
+
+            } else {
+                // HIDE THE GHOST TILE when outside the grid area
+                ghostTile.style.display = 'none';
+                lastSnappedX = -1;
+                lastSnappedY = -1;
+            }
+        }
+        
+        // Placement handler triggered by click on the grid wrapper
+        function handlePlacementClick(e) {
+            // Do not allow placement if no tile is selected or currently dragging a tile
+            if (!currentTileSize || isDragging) return;
+            
+            // Do not place if the click target is an already placed tile (that should be handled by the drag logic) 
+            if (e.target.closest('.placed-tile')) return;
+
+            const isInvalid = ghostTile.classList.contains('invalid');
+            
+            // Check if the last snapped position was valid
+            if (isInvalid || lastSnappedX === -1) {
+                // Flash the grid wrapper for a moment to show placement failed
+                gridWrapper.style.borderColor = '#EF4444'; // Red
+                setTimeout(() => {
+                    gridWrapper.style.borderColor = '#374151'; // Original color
+                }, 200);
+                return; 
+            }
+            
+            // Create and finalize the new tile using the valid snapped coordinates
+            const newTileElement = createTileElement(currentTileSize, false);
+            
+            // Finalize Placement using the last snapped valid coordinates (unit coords)
+            finalizeTilePlacement(lastSnappedX, lastSnappedY, currentTileSize, newTileElement);
+
+            checkWinCondition();
+        }
+
+
+        // --- Dialog/Win Logic ---
+
+        function showSuccessDialog() {
+            if (!factorTiles.includes(currentTileSize)) {
+                // If they somehow tiled with a non-factor due to a bug, show failure
+                showFailureDialog(false);
+                return;
+            }
+            
+            // 1. Set the grid/wrapper animation
+            gridWrapper.classList.add('pulse-win');
+
+            // 2. Populate the dialog
+            const title = `<h2 class="success-title">🎉 Perfect Fit! 🎉</h2>`;
+            const message = `<p class="success-message">The $${currentTileSize} \times ${currentTileSize}$ tile is a **perfect factor** of $12$!</p>`;
+            const math = `<p class="text-3xl text-gray-700 mt-4">This means $12 \div ${currentTileSize} = ${12 / currentTileSize}$</p>`;
+            
+            simpleMessageContainer.innerHTML = title + message + math;
+            
+            // 3. Show dialog
+            gameDialog.classList.remove('hidden');
+            
+            // 4. Animate dialog content
+            setTimeout(() => {
+                dialogContentArea.classList.remove('scale-90', 'opacity-0');
+                dialogContentArea.classList.add('scale-100', 'opacity-100');
+                renderMath(); // Re-render math in the dialog
+            }, 10);
+            
+            currentTileSize = null; // Prevent further placement
+            updateGhostTileContent(null);
+            updateStatus(); 
+        }
+
+        function hideDialog() {
+            // Reverse animation
+            dialogContentArea.classList.add('scale-90', 'opacity-0');
+            dialogContentArea.classList.remove('scale-100', 'opacity-100');
+            
+            // Hide after animation
+            setTimeout(() => {
+                gameDialog.classList.add('hidden');
+                gridWrapper.classList.remove('pulse-win');
+            }, 300);
+        }
+
+        // --- Event Listeners and Initialization ---
+
+        resetButton.addEventListener('click', resetBoardState);
+        undoButton.addEventListener('click', undoLastMove);
+        document.getElementById('dialog-close-button').addEventListener('click', resetBoardState);
+        
+        // Handle window resize for responsiveness
+        window.addEventListener('resize', () => {
+            calculateUnitSize();
+            // Re-render existing tiles to new size
+            rebuildGrid(placedTiles.map(t => ({ x: t.x, y: t.y, size: t.size })));
+            // Re-update ghost tile appearance
+            if (currentTileSize) {
+                updateGhostTileContent(currentTileSize);
+            }
+        });
+
+
+        document.addEventListener('DOMContentLoaded', initGrid);
+    </script>
 </body>
 </html>
