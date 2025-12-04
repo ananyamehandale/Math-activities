@@ -8,7 +8,7 @@
 
     <!-- KaTeX CSS and JS for Math Rendering (Make sure this loads correctly) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" xintegrity="sha384-GvrDXHnZaH4W78Q9Rk+B5Wd8JjBwB9Z2Jc0V2YF8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-5f5n8pY+2n/i2V7Q9r7f9D5G4B5W6lP4K6nF5S6Ff6ZqN/j4B5W6lP4Z2T4" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-5f5n8pY2n/i2V9Rk+B5Wd8JjBwB9Z2Jc0V2YF8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" xintegrity="sha384-qfX0D/7/0tK2G2F8t4L9q2Q8V5eJ/7j8G5V7F9F5W6lP4Z2T4" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
 
     <style>
@@ -111,20 +111,6 @@
                 grid-template-rows: repeat(12, minmax(0, 1fr));
             }
         }
-        
-        /* Media Query for Large Screens (Desktop) - Optimization for Horizontal Space */
-        @media (min-width: 1024px) {
-             #tile-options-container {
-                /* Constrain the max width of the tile panel */
-                max-width: 12rem; /* Reduced width */
-            }
-            #tile-options {
-                /* Force tiles into a vertical column with minimal wrapping */
-                flex-direction: column;
-                align-items: flex-start;
-                justify-content: flex-start;
-            }
-        }
     </style>
     <!-- Firebase Imports: Removed xintegrity and used 'defer' for scripts, but kept the structure -->
     <script type="module">
@@ -192,10 +178,12 @@
                 <div id="tile-options-container" class="bg-white p-6 shadow-lg">
                     <!-- Updated text and arrow to point LEFT (onto the board) -->
                     <h2 class="text-xl font-semibold text-gray-700 mb-4">Click, Drag, and Tile $\leftarrow$</h2>
-                    <!-- Forcing vertical stack on large screens (lg:flex-col) to save horizontal space -->
-                    <div id="tile-options" class="flex flex-wrap gap-4 justify-center lg:flex-col lg:gap-6 lg:items-start">
+                    
+                    <!-- This section now uses a responsive grid layout -->
+                    <div id="tile-options" class="flex flex-wrap gap-4 justify-center lg:grid lg:grid-cols-2 lg:gap-x-12 lg:gap-y-6">
                         <!-- Tiles are dynamically generated here -->
                     </div>
+                    
                 </div>
                 
             </div>
@@ -390,9 +378,9 @@
                 return; 
             }
 
+            // Set the size choice immediately, but don't disable other options yet.
             if (currentTileSize === null) {
                 currentTileSize = size;
-                updateTileOptions(currentTileSize);
                 updateStatus();
             }
             
@@ -421,7 +409,6 @@
             
             if (currentTileSize === null) {
                  currentTileSize = tileData.size;
-                 updateTileOptions(currentTileSize);
                  updateStatus();
             }
 
@@ -499,7 +486,7 @@
 
             // Reset challenge state
             currentTileSize = null;
-            updateTileOptions(null);
+            updateTileOptions(null); // Re-enables all tiles
             updateStatus();
         }
 
@@ -527,15 +514,17 @@
             const droppedOffGrid = !isOverGrid(tileRect, gridRect);
 
             if (droppedInBin || droppedOffGrid) {
-                // If the tile is dropped off grid or in the bin:
-                
                 // 1. Remove the current drag element from the body (it's gone)
                 currentDragTile.remove();
 
-                // 2. If the tile originated from the board, it signifies a reset of the challenge.
+                // 2. If tile was dragged from the board, reset the challenge state (removes all tiles of that size)
                 if (dragOrigin === 'board') {
-                    // This will reset currentTileSize to null and remove all tiles of that size.
                     removeTilesOfCurrentSize(currentTileSize);
+                } 
+                // 3. If tile was dragged from the source but failed placement, reset the selected size only (keeps all options enabled)
+                else if (dragOrigin === 'source' && placedTiles.length === 0) {
+                    currentTileSize = null;
+                    updateTileOptions(null);
                 }
                 
             } else {
@@ -653,6 +642,9 @@
             // Add new data object for the placed tile
             const tileData = { x, y, size, element };
             placedTiles.push(tileData);
+            
+            // Disable other tile sources now that a tile has been successfully placed.
+            updateTileOptions(currentTileSize);
             
             // Add event listener for picking up existing tiles
             element.addEventListener('mousedown', (e) => startDragFromBoard(e, tileData));
