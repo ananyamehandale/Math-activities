@@ -114,7 +114,6 @@
 
         /* --- STATUS BAR STYLES --- */
         #status-bar-wrapper {
-            /* UPDATED WIDTH: Covers Grid (600) + Gap (32) + Options (250) approx */
             max-width: 882px;
             width: 100%;
             margin-bottom: 1.5rem;
@@ -139,6 +138,13 @@
         #status-message-content > p {
             margin: 0;
         }
+        
+        /* Hints container below status bar */
+        #hints-container {
+             min-height: 1.5rem; /* Reserve space to avoid jumping */
+             margin-bottom: 0.5rem;
+             transition: opacity 0.3s ease;
+        }
 
         /* --- PULSE ANIMATION --- */
         @keyframes scale-pulse {
@@ -161,8 +167,7 @@
         @media (max-width: 1023px) {
             #grid-wrapper { width: 100%; height: 100vw; max-width: 600px; max-height: 600px; }
             .grid-container { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(12, minmax(0, 1fr)); }
-            /* Maintain centered alignment on smaller screens */
-            #status-bar-wrapper { margin-left: auto; margin-right: auto; max-width: 600px; }
+            #status-bar-wrapper { margin-left: auto; margin-right: auto; }
         }
     </style>
     
@@ -182,20 +187,25 @@
 
     <div class="max-w-6xl w-full">
         <h1 class="text-5xl sm:text-6xl font-extrabold text-gray-800 mb-2">Factors of 12</h1>
-        <p id="instruction-text" class="text-xl text-gray-600 mb-2 font-semibold">
+        <p id="instruction-text" class="text-xl text-gray-600 mb-6 font-semibold">
             Repeat any one type/size of tile to fill the big 12×12 square without any gaps
         </p>
 
-        <!-- UPDATED CLASS: increased max-width to span the full area -->
-        <div id="status-bar-wrapper" class="w-full lg:max-w-[882px] mx-auto lg:mx-0">
+        <div id="status-bar-wrapper" class="lg:w-[600px] mx-auto lg:mx-0">
             <div id="status-bar" class="text-lg text-gray-800 font-medium rounded-md">
                 <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full gap-6"></div>
+            </div>
+            
+            <!-- HINTS CONTAINER -->
+            <div id="hints-container" class="w-full flex justify-between items-start text-sm opacity-0">
+                <span id="hint-left" class="text-blue-600 font-bold"></span>
+                <span id="hint-right" class="font-semibold"></span>
             </div>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-8">
-            <!-- Left Panel -->
-            <div class="flex flex-col flex-shrink-0 items-center">
+            <!-- Left Panel: Grid, Status, and Buttons -->
+            <div class="flex flex-col flex-shrink-0 items-center w-full lg:w-auto">
                  <div id="grid-wrapper" class="relative w-full lg:w-[600px] lg:h-[600px] shadow-2xl overflow-hidden bg-gray-100 aspect-square">
                     <div id="tiling-grid" class="grid-container w-full h-full"></div>
                 </div>
@@ -270,6 +280,9 @@
         const tileOptionsSource = document.getElementById('tile-options'); 
         const statusBar = document.getElementById('status-bar');
         const statusMessageContent = document.getElementById('status-message-content');
+        const hintsContainer = document.getElementById('hints-container');
+        const hintLeft = document.getElementById('hint-left');
+        const hintRight = document.getElementById('hint-right');
         const resetButton = document.getElementById('reset-button');
         const undoButton = document.getElementById('undo-button'); 
         const gameDialog = document.getElementById('game-dialog');
@@ -385,7 +398,10 @@
                     selectTileSize(size); 
                 }
             });
-            tile.addEventListener('mousedown', (e) => startDragFromSource(e, size));
+            // STRICT CHECK: Only allow drag on LEFT CLICK (button 0)
+            tile.addEventListener('mousedown', (e) => {
+                if (e.button === 0) startDragFromSource(e, size);
+            });
             return wrapper;
         }
 
@@ -397,7 +413,7 @@
         function selectTileSize(size) {
             if (currentTileSize !== size) {
                 currentTileSize = size;
-                ghostModeActive = false; // Reset ghost mode on new selection
+                ghostModeActive = false; 
                 updateTileOptions(size);
                 updateGhostTileContent(size);
                 updateStatus();
@@ -444,30 +460,50 @@
                 const totalAreaFilled = placedTiles.length * tileArea;
                 const isFactor = factorTiles.includes(currentTileSize);
 
+                // 1. Status Bar Content
                 const tileInUse = `<span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}`;
                 const tilesPlaced = `<span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}`;
+                // Changed to use gap-8 directly
+                const baseMessage = `<p class="flex items-center gap-8">${tileInUse} ${tilesPlaced}</p>`;
                 
-                const rightClickHint = ghostModeActive 
-                    ? `<span class="text-sm text-blue-600 font-bold ml-2 self-center">(Right-click to stop quick fill)</span>`
-                    : `<span class="text-sm text-gray-500 font-normal ml-2 self-center">(Right-click for quick fill)</span>`;
-
-                let baseMessage = `<p class="flex justify-between w-full">${tileInUse} ${tilesPlaced} ${rightClickHint}</p>`;
-                let nudgeMessage = '';
+                // 2. Hints Content
+                const rightClickText = ghostModeActive 
+                    ? `(Right-click to stop quick fill)`
+                    : `(Right-click for quick fill)`;
                 
-                if (isFactor && totalAreaFilled / totalUnits >= 0.75 && placedTiles.length < (totalUnits / tileArea)) nudgeMessage = '<p class="text-sm text-green-600 font-semibold text-center mt-1">(You\'re close to finding the factor!)</p>';
+                let nudgeText = '';
+                let nudgeClass = '';
+                
+                if (isFactor && totalAreaFilled / totalUnits >= 0.75 && placedTiles.length < (totalUnits / tileArea)) {
+                    nudgeText = "(You're close to finding the factor!)";
+                    nudgeClass = "text-green-600";
+                }
+                
                 const isNonFactor = nonFactorTiles.includes(currentTileSize);
-                if (isNonFactor && placedTiles.length >= 2) nudgeMessage = '<p class="text-sm text-red-500 font-semibold text-center mt-1">(Hint: This tile might not be a perfect fit. Try another size?)</p>';
+                if (isNonFactor && placedTiles.length >= 2) {
+                    nudgeText = "(Hint: This tile might not be a perfect fit. Try another size?)";
+                    nudgeClass = "text-red-500";
+                }
                 
+                // Update DOM
                 statusBar.classList.add('active');
                 statusMessageContent.innerHTML = baseMessage;
-                statusMessageContent.classList.remove('opacity-0', 'justify-between');
-                statusMessageContent.classList.add('flex-col', 'items-start'); 
-                if (nudgeMessage) statusMessageContent.innerHTML += nudgeMessage;
-                statusMessageContent.style.opacity = 1; 
+                statusMessageContent.classList.remove('opacity-0');
+                
+                hintLeft.textContent = rightClickText;
+                hintRight.textContent = nudgeText;
+                hintRight.className = `font-semibold ${nudgeClass}`;
+                hintsContainer.classList.remove('opacity-0');
+
             } else {
                 statusBar.classList.remove('active');
                 statusMessageContent.innerHTML = '';
-                statusMessageContent.style.opacity = 0; 
+                statusMessageContent.classList.add('opacity-0');
+                
+                hintsContainer.classList.add('opacity-0');
+                hintLeft.textContent = '';
+                hintRight.textContent = '';
+                
                 ghostTile.style.display = 'none'; 
             }
             updateUndoButtonState(); 
@@ -555,6 +591,9 @@
         }
 
         function startDragFromBoard(e, tileData) {
+            // STRICT CHECK: Only allow drag on LEFT CLICK (button 0)
+            if (e.button !== 0) return;
+
             e.preventDefault(); e.stopPropagation(); 
             ghostTile.style.display = 'none'; 
             if (currentTileSize === null || currentTileSize !== tileData.size) selectTileSize(tileData.size);
