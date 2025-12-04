@@ -92,6 +92,13 @@
         }
 
         /* --- NEW STATUS BAR STYLES --- */
+        #status-bar-wrapper {
+            /* Ensures the wrapper aligns with the grid */
+            max-width: 600px;
+            width: 100%;
+            margin-bottom: 1.5rem; /* mb-6 equivalent, acts as a dynamic margin */
+        }
+        
         #status-bar {
             /* Reset colors and borders */
             background-color: transparent;
@@ -102,20 +109,27 @@
             /* Control height dynamically */
             max-height: 100px;
             overflow: hidden;
-            transition: max-height 0.3s ease, padding 0.3s ease;
+            transition: max-height 0.3s ease, padding 0.3s ease, background-color 0.3s ease;
         }
         #status-bar.active {
-            padding-top: 0.75rem; /* p-3 equivalent */
-            padding-bottom: 0.75rem; /* p-3 equivalent */
+            padding-top: 0.5rem; /* p-2 equivalent */
+            padding-bottom: 0.5rem; /* p-2 equivalent */
+            /* Added horizontal padding for left space */
+            padding-left: 1rem; /* px-4 equivalent */
+            padding-right: 1rem; /* px-4 equivalent */
+
             /* Set a slight background when active, but not yellow */
             background-color: #e5e7eb; /* gray-200 */
         }
         #status-bar:not(.active) {
             margin-bottom: 0; /* Collapse margin when inactive */
-            /* Override tailwind margin for active state only */
-            margin-bottom: 1.5rem; /* mb-6 equivalent */
         }
         
+        /* Reduce distance between text elements */
+        #status-message-content > p {
+            margin: 0;
+        }
+
         /* --- PULSE ANIMATION FOR SUCCESS --- */
         @keyframes scale-pulse {
             0% { 
@@ -199,6 +213,11 @@
                 grid-template-columns: repeat(12, minmax(0, 1fr));
                 grid-template-rows: repeat(12, minmax(0, 1fr));
             }
+            /* Ensures status bar stays centered above the grid on small screens */
+            #status-bar-wrapper {
+                margin-left: auto;
+                margin-right: auto;
+            }
         }
     </style>
     <!-- Firebase Imports: Required boilerplate for persistence -->
@@ -246,10 +265,12 @@
         </p>
 
         <!-- 2. New Dynamic Status Bar (Tile in Use / Count) -->
-        <!-- Removed yellow classes. Added 'min-h-[2rem]' to maintain vertical rhythm when inactive, removed mb-6 (will be handled by JS toggle) -->
-        <div id="status-bar" class="text-lg mb-6 min-h-[2rem] text-gray-800 font-medium rounded-md">
-            <!-- Adjusted inner content to use flex and justify-between for one-line display -->
-            <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full"></div>
+        <!-- Added status-bar-wrapper to control the width and alignment -->
+        <div id="status-bar-wrapper" class="lg:w-[600px] mx-auto lg:mx-0">
+            <div id="status-bar" class="text-lg text-gray-800 font-medium rounded-md">
+                <!-- Inner content uses flex and gap-6 for reduced spacing -->
+                <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full gap-6"></div>
+            </div>
         </div>
 
         <!-- Main Content Wrapper: Side-by-side on large screens -->
@@ -455,7 +476,7 @@
                 const tileInUse = `<span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}`;
                 const tilesPlaced = `<span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}`;
                 
-                // Combine into a single line with spacing
+                // Use flex-row and gap-6 in status-message-content for reduced spacing
                 let baseMessage = `
                     <p>${tileInUse}</p>
                     <p>${tilesPlaced}</p>
@@ -481,11 +502,17 @@
                 // Inject base message into the flex container
                 statusMessageContent.innerHTML = baseMessage;
                 statusMessageContent.classList.remove('opacity-0');
+                
+                // Adjust content classes: change justify-between to space-x-6 for explicit gap
+                statusMessageContent.classList.remove('justify-between');
+                statusMessageContent.classList.add('space-x-6');
 
                 // If a nudge exists, append it separately below the main line
                 if (nudgeMessage) {
                     // Create a separate div/p for the nudge below the main flex row
                     const nudgeContainer = document.createElement('div');
+                    // Add text-sm and text-left to the nudge message container
+                    nudgeContainer.className = 'w-full text-sm text-left pt-1'; 
                     nudgeContainer.innerHTML = nudgeMessage;
                     statusMessageContent.appendChild(nudgeContainer);
                 }
@@ -497,6 +524,8 @@
                 statusBar.classList.remove('active');
                 statusMessageContent.innerHTML = '';
                 statusMessageContent.classList.add('opacity-0');
+                statusMessageContent.classList.remove('space-x-6');
+                statusMessageContent.classList.add('justify-between');
             }
         }
 
@@ -966,4 +995,3 @@
 
 </body>
 </html>
-
