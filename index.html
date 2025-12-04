@@ -109,9 +109,10 @@
             transition: all 0.3s ease-in-out;
         }
 
-        /* --- STATUS BAR STYLES (Fixed to prevent height increase) --- */
+        /* --- STATUS BAR STYLES (Fixed to prevent height increase - THIS IS THE FIX) --- */
         #status-bar-wrapper {
-            max-width: 600px;
+            /* Increased max-width to accommodate text on larger screens */
+            max-width: 700px; 
             width: 100%;
             margin-bottom: 1.5rem;
         }
@@ -127,7 +128,8 @@
             transition: max-height 0.3s ease, padding 0.3s ease, background-color 0.3s ease;
         }
         #status-bar.active {
-            max-height: 100px; /* Expands to a visible size */
+            /* Expands to a visible size with a max height that fits multi-line text */
+            max-height: 100px; 
             padding-top: 0.5rem; 
             padding-bottom: 0.5rem; 
             padding-left: 1rem; 
@@ -219,6 +221,7 @@
             #status-bar-wrapper {
                 margin-left: auto;
                 margin-right: auto;
+                max-width: 90%; /* Ensure it fits smaller screens better */
             }
         }
     </style>
@@ -263,11 +266,11 @@
         
         <!-- 1. Primary Instruction Text -->
         <p id="instruction-text" class="text-xl text-gray-600 mb-2 font-semibold">
-            Repeat any one type/size of tile to fill the big 12×12 square without any gaps
+            Repeat any one type/size of tile to fill the big $12 \times 12$ square without any gaps
         </p>
 
         <!-- 2. Dynamic Status Bar -->
-        <div id="status-bar-wrapper" class="lg:w-[600px] mx-auto lg:mx-0">
+        <div id="status-bar-wrapper" class="mx-auto lg:mx-0">
             <div id="status-bar" class="text-lg text-gray-800 font-medium rounded-md">
                 <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full gap-6"></div>
             </div>
@@ -645,14 +648,12 @@
             updateUndoButtonState(); // Update undo state on status refresh
         }
 
-        // --- GHOST TILE AND PLACEMENT LOGIC ---
+        // --- GHOST TILE AND PLACEMENT LOGIC (Ghost visibility limited to grid) ---
 
         let lastSnappedX = -1, lastSnappedY = -1;
         
         /**
          * Ensures the ghost tile is only visible and snaps when over the grid.
-         * FIX: Uses fixed positioning logic to track cursor relative to viewport,
-         * but visibility is strictly limited to the grid area.
          */
         function updateGhostTile(e) {
             // Only show ghost if a tile is selected AND not dragging a tile already
@@ -701,12 +702,11 @@
                 }
                 
                 // Position the ghost using FIXED coordinates relative to the viewport
-                // This makes it follow the mouse globally, but its visibility is restricted by the isOverGrid check above.
                 ghostTile.style.left = `${gridRect.left + snapX}px`;
                 ghostTile.style.top = `${gridRect.top + snapY}px`;
 
             } else {
-                // HIDE THE GHOST TILE when outside the grid area, enforcing the user's request
+                // HIDE THE GHOST TILE when outside the grid area
                 ghostTile.style.display = 'none';
                 lastSnappedX = -1;
                 lastSnappedY = -1;
@@ -1171,4 +1171,3 @@
 
 </body>
 </html>
-
