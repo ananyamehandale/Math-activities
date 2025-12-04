@@ -6,7 +6,7 @@
     <title>Factors of 12</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- KaTeX CSS and JS for Math Rendering (Make sure this loads correctly) -->
+    <!-- KaTeX CSS and JS for Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" xintegrity="sha384-GvrDXHnZaH4W78Q9Rk+B5Wd8JjBwB9Z2Jc0V2YF8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-5f5n8pY2h/1aD3UvA0vP4Z2T4" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" xintegrity="sha384-qfX0D/7/0tK2G2F8g9W9/1aD3UvA0vP4Z2T4" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
@@ -214,10 +214,16 @@
     <div class="max-w-6xl w-full">
         <!-- Main Title: Increased size to text-6xl and simplified text -->
         <h1 class="text-5xl sm:text-6xl font-extrabold text-gray-800 mb-2">Factors of 12</h1>
-        <!-- Primary Instruction Text -->
-        <p id="instruction-text" class="text-xl text-gray-600 mb-6 font-semibold">
+        
+        <!-- 1. Primary Instruction Text (CONSTANT) -->
+        <p id="instruction-text" class="text-xl text-gray-600 mb-2 font-semibold">
             Repeat any one type/size of tile to fill the big $12 \times 12$ square without any gaps.
         </p>
+
+        <!-- 2. New Dynamic Status Bar (Tile in Use / Count) -->
+        <div id="status-bar" class="text-lg mb-6 min-h-[2rem] p-3 bg-yellow-100 rounded-md text-gray-800 font-medium border-l-4 border-yellow-500">
+            Select a tile size from the options below to begin tiling the square.
+        </div>
 
         <!-- Main Content Wrapper: Side-by-side on large screens -->
         <div class="flex flex-col lg:flex-row gap-8">
@@ -310,7 +316,8 @@
         const tilingGrid = document.getElementById('tiling-grid');
         const tileOptionsContainer = document.getElementById('tile-options-container'); // New ID for the combined bin/source
         const tileOptionsSource = document.getElementById('tile-options'); 
-        const instructionText = document.getElementById('instruction-text');
+        const instructionText = document.getElementById('instruction-text'); // Kept for consistency, but its content is static now
+        const statusBar = document.getElementById('status-bar'); // NEW DOM ELEMENT
         const resetButton = document.getElementById('reset-button');
         const gameDialog = document.getElementById('game-dialog');
         const dialogContentArea = document.getElementById('dialog-content-area');
@@ -412,31 +419,40 @@
             const totalUnits = GRID_SIZE * GRID_SIZE; // 144
             
             if (currentTileSize) {
-                // Modified status message to use "Active Tile" instead of "Challenge: Tiling"
-                const baseMessage = `<span class="text-gray-800 font-bold">Active Tile: ${currentTileSize}x${currentTileSize}.</span> Tiles Placed: ${placedTiles.length}.`;
-                message = baseMessage;
-                
                 const isFactor = factorTiles.includes(currentTileSize);
                 const tileArea = currentTileSize * currentTileSize;
                 const totalAreaFilled = placedTiles.length * tileArea;
 
+                // --- Base Status (New Format) ---
+                let requiredTiles = isFactor ? (totalUnits / tileArea) : 'N/A';
+                
+                let baseMessage = `
+                    <p><span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}</p>
+                    <p><span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}${requiredTiles !== 'N/A' ? ` / ${requiredTiles} required` : ''}</p>
+                `;
+                
+                // --- Nudges and Hints ---
+                let nudgeMessage = '';
+                
                 // **LOGIC FOR FACTOR TILE NUDGE (75% filled)**
                 if (isFactor && totalAreaFilled / totalUnits >= 0.75 && placedTiles.length < (totalUnits / tileArea)) {
-                    message += ' <span class="text-sm text-green-600 font-semibold">(Great, you\'re almost there!)</span>';
+                    nudgeMessage = ' <span class="text-sm text-green-600 font-semibold">(You\'re close to finding the factor!)</span>';
                 }
                 
                 // LOGIC FOR NON-FACTOR TILE HINT (after 2 placements)
                 const isNonFactor = nonFactorTiles.includes(currentTileSize);
                 if (isNonFactor && placedTiles.length >= 2) {
-                    message += ' <span class="text-sm text-red-500 font-semibold">(Hint: Maybe try using a different tile size?)</span>';
+                    nudgeMessage = ' <span class="text-sm text-red-500 font-semibold">(Hint: This tile might not be a factor of 12. Try another size?)</span>';
                 }
+                
+                message = baseMessage + nudgeMessage;
+
             } else {
-                message = `Repeat any one type/size of tile to fill the big $12 \\times 12$ square without any gaps.`;
+                // Initial state
+                message = `Select a tile size from the options below to begin tiling the square.`;
             }
 
-            instructionText.innerHTML = message;
-            // Re-render math on status change
-            renderMath();
+            statusBar.innerHTML = message;
         }
 
         // --- Core Drag/Move Logic ---
@@ -623,8 +639,8 @@
             
             return (
                 // Center is over grid
-                tileCenterX > gridRect.left && tileCenterX < gridRect.right &&
-                tileCenterY > gridRect.top && tileCenterY < gridRect.bottom
+                tileCenterX > gridRect.left && tileRect.right < gridRect.right &&
+                tileCenterY > gridRect.top && tileRect.bottom < gridRect.bottom
             );
         }
 
@@ -778,7 +794,7 @@
             
             // Clear summary content first
             document.getElementById('summary-content').innerHTML = '';
-            dialogCloseButton.style.display = 'none'; // Default to hide the single button
+            document.getElementById('dialog-close-button').style.display = 'none'; // Default to hide the single button
 
             if (success) {
                 // Success Case: Focused discovery
@@ -806,7 +822,7 @@
                             Back to View
                         </button>
                         <button id="btn-next" class="flex-1 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150">
-                            Next Challenge
+                            Next
                         </button>
                     </div>
                 `;
@@ -839,9 +855,9 @@
                 `;
                 
                 // Show and configure the single button for the failure case
-                dialogCloseButton.style.display = 'block';
-                dialogCloseButton.textContent = 'Start New Attempt';
-                dialogCloseButton.onclick = () => {
+                document.getElementById('dialog-close-button').style.display = 'block';
+                document.getElementById('dialog-close-button').textContent = 'Start New Attempt';
+                document.getElementById('dialog-close-button').onclick = () => {
                     hideDialog();
                     resetGame(true); // True means skip the summary check after reset
                 };
@@ -905,4 +921,3 @@
 
 </body>
 </html>
-
