@@ -71,7 +71,7 @@
             cursor: grabbing;
         }
 
-        /* --- GHOST TILE STYLES (now used for continuous placement) --- */
+        /* --- GHOST TILE STYLES --- */
         #ghost-tile {
             position: fixed; /* Use fixed positioning for reliable cursor following */
             pointer-events: none; /* Crucial: allows clicks to pass through to the grid */
@@ -109,15 +109,13 @@
             transition: all 0.3s ease-in-out;
         }
 
-        /* --- STATUS BAR STYLES (Fixed to prevent height increase - THIS IS THE FIX) --- */
+        /* --- STATUS BAR STYLES --- */
         #status-bar-wrapper {
-            /* Increased max-width to accommodate text on larger screens */
-            max-width: 700px; 
+            max-width: 600px;
             width: 100%;
             margin-bottom: 1.5rem;
         }
         
-        /* Constrain height when inactive to prevent jumping */
         #status-bar {
             background-color: transparent;
             border-left: none;
@@ -128,7 +126,6 @@
             transition: max-height 0.3s ease, padding 0.3s ease, background-color 0.3s ease;
         }
         #status-bar.active {
-            /* Expands to a visible size with a max height that fits multi-line text */
             max-height: 100px; 
             padding-top: 0.5rem; 
             padding-bottom: 0.5rem; 
@@ -221,7 +218,6 @@
             #status-bar-wrapper {
                 margin-left: auto;
                 margin-right: auto;
-                max-width: 90%; /* Ensure it fits smaller screens better */
             }
         }
     </style>
@@ -270,7 +266,7 @@
         </p>
 
         <!-- 2. Dynamic Status Bar -->
-        <div id="status-bar-wrapper" class="mx-auto lg:mx-0">
+        <div id="status-bar-wrapper" class="lg:w-[600px] mx-auto lg:mx-0">
             <div id="status-bar" class="text-lg text-gray-800 font-medium rounded-md">
                 <div id="status-message-content" class="transition-opacity duration-300 opacity-0 flex justify-between items-center w-full gap-6"></div>
             </div>
@@ -450,11 +446,8 @@
          */
         function undoLastMove() {
             if (history.length > 0) {
-                // Pop the *current* state (the one we want to undo)
-                history.pop();
-                
-                // Get the state *before* the last move
-                const previousState = history.length > 0 ? history[history.length - 1] : [];
+                // Get the last state from history
+                const previousState = history.pop();
 
                 // Re-render the grid based on the historical state
                 rebuildGrid(previousState);
@@ -476,7 +469,6 @@
             // 2. Re-create the DOM elements and the placedTiles array
             state.forEach(tileData => {
                 const newTileElement = createTileElement(tileData.size, false);
-                // Note: We don't push state here because we are loading from history
                 finalizeTilePlacement(tileData.x, tileData.y, tileData.size, newTileElement, false); 
             });
         }
@@ -648,12 +640,14 @@
             updateUndoButtonState(); // Update undo state on status refresh
         }
 
-        // --- GHOST TILE AND PLACEMENT LOGIC (Ghost visibility limited to grid) ---
+        // --- GHOST TILE AND PLACEMENT LOGIC ---
 
         let lastSnappedX = -1, lastSnappedY = -1;
         
         /**
          * Ensures the ghost tile is only visible and snaps when over the grid.
+         * FIX: Uses fixed positioning logic to track cursor relative to viewport,
+         * but visibility is strictly limited to the grid area.
          */
         function updateGhostTile(e) {
             // Only show ghost if a tile is selected AND not dragging a tile already
@@ -675,15 +669,12 @@
             if (isOverGrid) {
                 ghostTile.style.display = 'block';
                 
-                // Calculate position relative to the grid top-left corner
                 const relativeX = e.clientX - gridRect.left;
                 const relativeY = e.clientY - gridRect.top;
 
-                // Determine the snapped grid unit coordinates (0-11)
                 const unitX = Math.floor(relativeX / UNIT_PIXEL_SIZE);
                 const unitY = Math.floor(relativeY / UNIT_PIXEL_SIZE);
 
-                // Determine the pixel position of the top-left corner of the snapped unit
                 const snapX = unitX * UNIT_PIXEL_SIZE;
                 const snapY = unitY * UNIT_PIXEL_SIZE;
 
@@ -732,6 +723,9 @@
                 return; 
             }
             
+            // Push state before making the move
+            pushState();
+
             // Create and finalize the new tile
             const newTileElement = createTileElement(currentTileSize, false);
             
@@ -769,19 +763,22 @@
             
             // Calculate offsets based on cursor position relative to the top-left corner of the source tile
             const tileRect = e.currentTarget.getBoundingClientRect();
+            const sourceTileSizeInPx = tileRect.width; // The visual size of the tile in the options box
+            const factor = UNIT_PIXEL_SIZE / sourceTileUnitSize(size, tileRect.width); // Scaling factor of the source tile visual
             
-            // The scaling factor from the source tile size to the actual placed tile size
-            const sourceTileUnitSize = tileRect.width / size; // e.g., if 2x2 source is 50px, this is 25px
-            const factor = UNIT_PIXEL_SIZE / sourceTileUnitSize;
-            
-            dragOffsetX = (e.clientX - tileRect.left) * factor;
-            dragOffsetY = (e.clientY - tileRect.top) * factor;
+            dragOffsetX = (e.clientX - tileRect.left) * (size * UNIT_PIXEL_SIZE / tileRect.width);
+            dragOffsetY = (e.clientY - tileRect.top) * (size * UNIT_PIXEL_SIZE / tileRect.width);
             
             isDragging = true;
             dragOriginIsSource = true;
             ghostTile.style.display = 'none'; // Hide ghost while dragging
             
             setupGlobalDragEvents();
+        }
+        
+        // Helper to get visual unit size of source tile
+        function sourceTileUnitSize(size, totalWidth) {
+             return totalWidth / size;
         }
 
 
@@ -834,17 +831,16 @@
                 const size = parseInt(currentDragTile.dataset.size);
                 const gridRect = tilingGrid.getBoundingClientRect();
 
-                // Calculate the coordinate of the tile's top-left corner relative to the grid
-                const tileTopLeftX = e.clientX - dragOffsetX;
-                const tileTopLeftY = e.clientY - dragOffsetY;
-                
-                // Check if the tile's top-left corner is over the grid
-                if (tileTopLeftX < gridRect.right && tileTopLeftY < gridRect.bottom &&
-                    tileTopLeftX + size * UNIT_PIXEL_SIZE > gridRect.left && tileTopLeftY + size * UNIT_PIXEL_SIZE > gridRect.top) {
+                // Check if the current position is over the grid
+                if (e.clientX > gridRect.left && e.clientX < gridRect.right && 
+                    e.clientY > gridRect.top && e.clientY < gridRect.bottom) {
+                    
+                    const relativeX = e.clientX - gridRect.left;
+                    const relativeY = e.clientY - gridRect.top;
 
-                    // Calculate unit coordinates based on the top-left corner relative to the grid
-                    const unitX = Math.round((tileTopLeftX - gridRect.left) / UNIT_PIXEL_SIZE);
-                    const unitY = Math.round((tileTopLeftY - gridRect.top) / UNIT_PIXEL_SIZE);
+                    // Calculate unit coordinates based on the top-left corner (compensate for offset)
+                    const unitX = Math.floor((e.clientX - dragOffsetX - gridRect.left + (UNIT_PIXEL_SIZE/2)) / UNIT_PIXEL_SIZE);
+                    const unitY = Math.floor((e.clientY - dragOffsetY - gridRect.top + (UNIT_PIXEL_SIZE/2)) / UNIT_PIXEL_SIZE);
 
                     const outOfBounds = unitX < 0 || unitY < 0 || unitX + size > GRID_SIZE || unitY + size > GRID_SIZE;
                     const isOverlapped = checkOverlap(unitX, unitY, size);
@@ -874,48 +870,47 @@
             const gridRect = gridWrapper.getBoundingClientRect();
             const tileRect = currentDragTile.getBoundingClientRect();
 
-            // Calculate target position in grid units based on top-left of the tile
-            const targetX = tileRect.left - gridRect.left;
-            const targetY = tileRect.top - gridRect.top;
+            // Check for tile removal (dropped in the new bin area)
+            const binRect = tileOptionsContainer.getBoundingClientRect(); 
+            const tileCenterX = (tileRect.left + tileRect.right) / 2;
+            const tileCenterY = (tileRect.top + tileRect.bottom) / 2;
 
-            // Snap coordinates to the nearest unit
-            const unitX = Math.round(targetX / UNIT_PIXEL_SIZE);
-            const unitY = Math.round(targetY / UNIT_PIXEL_SIZE);
-            
-            const isInsideGridBounds = (
-                unitX >= 0 && unitY >= 0 && 
-                unitX + size <= GRID_SIZE && unitY + size <= GRID_SIZE
+            const droppedInBin = (
+                tileCenterX > binRect.left && tileCenterX < binRect.right && 
+                tileCenterY > binRect.top && tileCenterY < binRect.bottom
             );
             
-            // Check for overlap (important if the drag was a move)
-            const isOverlapped = checkOverlap(unitX, unitY, size);
-            
-            const placementSuccessful = isInsideGridBounds && !isOverlapped;
-            
-            if (placementSuccessful) {
-                // --- Successful Placement/Move ---
-                finalizeTilePlacement(unitX, unitY, size, currentDragTile);
-                
-                // Only push state if the drag originated from the source (placing a new tile)
-                // If it originated from the board, the state was already pushed in startDragFromBoard (before removal)
-                // We now push the final, successful state.
-                if (dragOriginIsSource) {
-                    pushState();
-                } else {
-                    // This was a successful move (drag from board), so we push the new position.
-                    pushState(); 
-                }
+            const droppedOffGrid = !isOverGrid(tileRect, gridRect);
 
-                checkWinCondition();
-
-            } else {
-                // --- Placement Failed (Dropped off board or overlapped) ---
+            if (droppedInBin || droppedOffGrid) {
+                // 1. Remove the current drag element from the body (it's gone)
                 currentDragTile.remove();
 
-                // If it was a drag from the board, undo the move to restore the tile to its original position
+                // 2. If tile was dragged from the board, it's a single tile removal.
+                // Do NOT fully reset unless it was the last tile.
                 if (!dragOriginIsSource) {
-                    undoLastMove(); 
+                     // Just don't re-add it. Check if any tiles remain.
+                     if (placedTiles.length === 0) {
+                         currentTileSize = null;
+                         updateTileOptions(null); // Re-enables all tiles
+                         updateGhostTileContent(null);
+                     }
+                     updateStatus();
+                } 
+                // 3. If tile was dragged from source but dropped outside/in bin, do nothing (cancel add)
+                else if (dragOriginIsSource) {
+                    if (placedTiles.length === 0) {
+                        // If this was the first drag and it failed, reset selection
+                         currentTileSize = null;
+                         updateTileOptions(null); 
+                         updateGhostTileContent(null);
+                         updateStatus();
+                    }
                 }
+                
+            } else {
+                // Drop inside the grid wrapper
+                handleDrop(size);
             }
 
             currentDragTile = null;
@@ -924,16 +919,56 @@
             updateStatus();
         }
         
-        function finalizeTilePlacement(x, y, size, element, shouldPushState = true) {
+        function handleDrop(size) {
+            const gridRect = tilingGrid.getBoundingClientRect();
+            const tileRect = currentDragTile.getBoundingClientRect();
+
+            const relativeX = tileRect.left - gridRect.left;
+            const relativeY = tileRect.top - gridRect.top;
+
+            const unitX = Math.round(relativeX / UNIT_PIXEL_SIZE);
+            const unitY = Math.round(relativeY / UNIT_PIXEL_SIZE);
+            
+            const snapX = unitX * UNIT_PIXEL_SIZE;
+            const snapY = unitY * UNIT_PIXEL_SIZE;
+
+            // Check Boundary
+            if (unitX < 0 || unitY < 0 || unitX + size > GRID_SIZE || unitY + size > GRID_SIZE) {
+                currentDragTile.remove();
+                // If drop failed, revert the state (put tile back)
+                if (!dragOriginIsSource) undoLastMove();
+                return; 
+            }
+
+            // Check Overlap (with the current tile size removed from the array)
+            if (checkOverlap(unitX, unitY, size)) {
+                currentDragTile.remove();
+                // If drop failed, revert the state
+                if (!dragOriginIsSource) undoLastMove();
+                return; 
+            }
+
+            // Finalize Placement
+            finalizeTilePlacement(unitX, unitY, size, currentDragTile, snapX, snapY, false); 
+            // Note: For board-to-board moves, state was pushed in startDragFromBoard.
+            // For source-to-board moves, state needs to be pushed.
+            if (dragOriginIsSource) {
+                pushState();
+            }
+            
+            if (dragOriginIsSource) checkWinCondition();
+        }
+        
+        function finalizeTilePlacement(x, y, size, element, snapX = x * UNIT_PIXEL_SIZE, snapY = y * UNIT_PIXEL_SIZE, shouldPushState = true) {
             element.remove(); 
             gridWrapper.appendChild(element); 
             
-            element.style.left = `${x * UNIT_PIXEL_SIZE}px`;
-            element.style.top = `${y * UNIT_PIXEL_SIZE}px`;
+            element.style.left = `${snapX}px`;
+            element.style.top = `${snapY}px`;
             
             element.style.position = 'absolute';
             
-            const tileData = { x, y, size, element, isPlaced: true }; // Added isPlaced for clarity
+            const tileData = { x, y, size, element, isPlaced: true }; 
             placedTiles.push(tileData);
             
             // Re-bind the mousedown listener for dragging the placed tile
@@ -945,6 +980,7 @@
                 pushState();
             }
 
+            updateTileOptions(currentTileSize); // Updates lockout state
             updateStatus();
         }
         
