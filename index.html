@@ -78,11 +78,12 @@
         #ghost-tile {
             position: fixed; /* Fixed to viewport for smooth tracking */
             pointer-events: none; /* Crucial: lets clicks pass through to grid */
-            opacity: 0.4;
-            z-index: 50; /* Above placed tiles (10) but below dialogs */
+            opacity: 0.5; /* Visible transparency */
+            z-index: 50; 
             display: none; 
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.6); 
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.4); 
             border: 2px dashed #4F46E5; 
+            background-color: rgba(255, 255, 255, 0.4); /* Semi-transparent white background */
         }
         #ghost-tile.invalid {
             box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); 
@@ -109,7 +110,7 @@
         }
         .dialog {
             transition: all 0.3s ease-in-out;
-            z-index: 200; /* Dialog on top of everything */
+            z-index: 200; 
         }
 
         /* --- STATUS BAR STYLES --- */
@@ -141,7 +142,7 @@
         
         /* Hints container below status bar */
         #hints-container {
-             min-height: 1.5rem; /* Reserve space to avoid jumping */
+             min-height: 1.5rem; 
              margin-bottom: 0.5rem;
              transition: opacity 0.3s ease;
         }
@@ -204,7 +205,7 @@
         </div>
 
         <div class="flex flex-col lg:flex-row gap-8">
-            <!-- Left Panel: Grid, Status, and Buttons -->
+            <!-- Left Panel -->
             <div class="flex flex-col flex-shrink-0 items-center w-full lg:w-auto">
                  <div id="grid-wrapper" class="relative w-full lg:w-[600px] lg:h-[600px] shadow-2xl overflow-hidden bg-gray-100 aspect-square">
                     <div id="tiling-grid" class="grid-container w-full h-full"></div>
@@ -271,8 +272,8 @@
         let dragOriginIsSource = false; 
         let currentDragTile = null; 
         let dragOffsetX, dragOffsetY; 
-        let lastSnappedX = -1, lastSnappedY = -1;
-        let ghostModeActive = false; // Default to false (Drag only)
+        let ghostModeActive = false; 
+        let justDropped = false; // Flag to prevent drag-drop causing immediate ghost click
 
         const gridWrapper = document.getElementById('grid-wrapper');
         const tilingGrid = document.getElementById('tiling-grid');
@@ -366,8 +367,6 @@
             updateGhostTileContent(null);
             updateStatus();
             ghostTile.style.display = 'none';
-            lastSnappedX = -1;
-            lastSnappedY = -1;
         }
 
         function createTileOption(size) {
@@ -463,7 +462,6 @@
                 // 1. Status Bar Content
                 const tileInUse = `<span class="text-indigo-600 font-bold">Tile in Use:</span> ${currentTileSize}x${currentTileSize}`;
                 const tilesPlaced = `<span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}`;
-                // Changed to use gap-8 directly
                 const baseMessage = `<p class="flex items-center gap-8">${tileInUse} ${tilesPlaced}</p>`;
                 
                 // 2. Hints Content
@@ -522,7 +520,6 @@
             // Only show ghost if tile selected, NOT dragging, AND ghost mode is ACTIVE
             if (!currentTileSize || isDragging || !ghostModeActive) {
                 ghostTile.style.display = 'none';
-                lastSnappedX = -1; lastSnappedY = -1;
                 return;
             }
             const gridRect = tilingGrid.getBoundingClientRect();
@@ -541,39 +538,56 @@
 
                 if (outOfBounds || isOverlapped) {
                     ghostTile.classList.add('invalid');
-                    lastSnappedX = -1; lastSnappedY = -1;
                 } else {
                     ghostTile.classList.remove('invalid');
-                    lastSnappedX = unitX; lastSnappedY = unitY;
                 }
                 ghostTile.style.left = `${gridRect.left + snapX}px`;
                 ghostTile.style.top = `${gridRect.top + snapY}px`;
             } else {
                 ghostTile.style.display = 'none';
-                lastSnappedX = -1; lastSnappedY = -1;
             }
         }
         
         function handlePlacementClick(e) {
+            // STRICT: Only Left Click (0) allows placement
+            if (e.button !== 0) return;
+
+            // Safety check: ensure we didn't just finish a drag operation
+            if (justDropped) return;
+
             // Only allow placement if ghost mode is ACTIVE
             if (!currentTileSize || isDragging || !ghostModeActive) return;
 
             if (e.target.closest('.placed-tile')) return;
             
-            const isInvalid = ghostTile.classList.contains('invalid');
-            if (isInvalid || lastSnappedX === -1) {
+            // Recalculate position on click to ensure accuracy
+            const gridRect = tilingGrid.getBoundingClientRect();
+            const relativeX = e.clientX - gridRect.left;
+            const relativeY = e.clientY - gridRect.top;
+            const unitX = Math.floor(relativeX / UNIT_PIXEL_SIZE);
+            const unitY = Math.floor(relativeY / UNIT_PIXEL_SIZE);
+
+            const outOfBounds = unitX < 0 || unitY < 0 || unitX + currentTileSize > GRID_SIZE || unitY + currentTileSize > GRID_SIZE;
+            const isOverlapped = checkOverlap(unitX, unitY, currentTileSize);
+
+            if (outOfBounds || isOverlapped) {
                 gridWrapper.style.borderColor = '#EF4444'; 
                 setTimeout(() => { gridWrapper.style.borderColor = '#374151'; }, 200);
                 return; 
             }
+            
             pushState();
             const newTileElement = createTileElement(currentTileSize, false);
-            finalizeTilePlacement(lastSnappedX, lastSnappedY, currentTileSize, newTileElement);
+            finalizeTilePlacement(unitX, unitY, currentTileSize, newTileElement);
             checkWinCondition();
         }
 
         function startDragFromSource(e, size) {
             e.preventDefault(); e.stopPropagation();
+            // Disable ghost mode if dragging manually
+            ghostModeActive = false; 
+            updateStatus();
+            
             selectTileSize(size); 
             currentDragTile = createTileElement(size, false);
             currentDragTile.classList.add('dragging');
@@ -639,6 +653,11 @@
         function onMouseUp(e) {
             if (!isDragging || !currentDragTile) return;
             isDragging = false;
+            
+            // Mark that a drop just happened to prevent immediate click firing
+            justDropped = true;
+            setTimeout(() => { justDropped = false; }, 100);
+            
             currentDragTile.classList.remove('dragging');
             const size = parseInt(currentDragTile.dataset.size);
             const gridRect = gridWrapper.getBoundingClientRect();
