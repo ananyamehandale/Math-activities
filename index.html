@@ -73,24 +73,7 @@
             cursor: grabbing;
             z-index: 100; /* Dragging tile is highest */
         }
-
-        /* --- GHOST TILE STYLES --- */
-        #ghost-tile {
-            position: fixed; /* Fixed to viewport for smooth tracking */
-            pointer-events: none; /* Crucial: lets clicks pass through to grid */
-            opacity: 0.5; /* Visible transparency */
-            z-index: 50; 
-            display: none; 
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.4); 
-            border: 2px dashed #4F46E5; 
-            background-color: rgba(255, 255, 255, 0.4); /* Semi-transparent white background */
-        }
-        #ghost-tile.invalid {
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); 
-            border: 2px dashed #EF4444; 
-            background-color: rgba(254, 202, 202, 0.5);
-            opacity: 0.5;
-        }
+        /* Removed Ghost Tile Styles */
 
         .tile-unit-cell {
             border: 1px solid rgba(0, 0, 0, 0.4); 
@@ -234,9 +217,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- Ghost Tile Element -->
-    <div id="ghost-tile"></div>
 
     <!-- Dialog -->
     <div id="game-dialog" class="dialog fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center hidden">
@@ -272,8 +252,6 @@
         let dragOriginIsSource = false; 
         let currentDragTile = null; 
         let dragOffsetX, dragOffsetY; 
-        let ghostModeActive = false; 
-        let justDropped = false; // Flag to prevent drag-drop causing immediate ghost click
 
         const gridWrapper = document.getElementById('grid-wrapper');
         const tilingGrid = document.getElementById('tiling-grid');
@@ -289,7 +267,6 @@
         const gameDialog = document.getElementById('game-dialog');
         const dialogContentArea = document.getElementById('dialog-content-area');
         const simpleMessageContainer = document.getElementById('simple-message-container');
-        const ghostTile = document.getElementById('ghost-tile'); 
 
         function calculateUnitSize() {
             const rect = tilingGrid.getBoundingClientRect();
@@ -351,22 +328,10 @@
             }
         }
 
-        // --- Toggle Ghost Mode ---
-        function toggleGhostMode(e) {
-            if (!currentTileSize) return;
-            ghostModeActive = !ghostModeActive;
-            // Pass the mouse event to immediately update position/visibility
-            updateGhostTile(e); 
-            updateStatus(); 
-        }
-        
         function deselectTile() {
             currentTileSize = null;
-            ghostModeActive = false;
             updateTileOptions(null);
-            updateGhostTileContent(null);
             updateStatus();
-            ghostTile.style.display = 'none';
         }
 
         function createTileOption(size) {
@@ -412,24 +377,9 @@
         function selectTileSize(size) {
             if (currentTileSize !== size) {
                 currentTileSize = size;
-                ghostModeActive = false; 
                 updateTileOptions(size);
-                updateGhostTileContent(size);
                 updateStatus();
             }
-        }
-
-        function updateGhostTileContent(size) {
-            calculateUnitSize(); 
-            if (!size) { ghostTile.style.display = 'none'; return; }
-            ghostTile.innerHTML = '';
-            const newGhostContent = createTileElement(size, true); 
-            ghostTile.appendChild(newGhostContent);
-            ghostTile.id = 'ghost-tile'; 
-            ghostTile.className = tileColors[size]; 
-            ghostTile.style.width = `${size * UNIT_PIXEL_SIZE}px`;
-            ghostTile.style.height = `${size * UNIT_PIXEL_SIZE}px`;
-            ghostTile.style.setProperty('--tile-grid-template', `repeat(${size}, 1fr)`);
         }
 
         function updateTileOptions(selectedSize) {
@@ -464,11 +414,7 @@
                 const tilesPlaced = `<span class="text-indigo-600 font-bold">Tiles Placed:</span> ${placedTiles.length}`;
                 const baseMessage = `<p class="flex items-center gap-8">${tileInUse} ${tilesPlaced}</p>`;
                 
-                // 2. Hints Content
-                const rightClickText = ghostModeActive 
-                    ? `(Right-click to stop quick fill)`
-                    : `(Right-click for quick fill)`;
-                
+                // 2. Hints Content (Removed right-click hint)
                 let nudgeText = '';
                 let nudgeClass = '';
                 
@@ -483,12 +429,11 @@
                     nudgeClass = "text-red-500";
                 }
                 
-                // Update DOM
                 statusBar.classList.add('active');
                 statusMessageContent.innerHTML = baseMessage;
                 statusMessageContent.classList.remove('opacity-0');
                 
-                hintLeft.textContent = rightClickText;
+                hintLeft.textContent = ''; // Removed hint
                 hintRight.textContent = nudgeText;
                 hintRight.className = `font-semibold ${nudgeClass}`;
                 hintsContainer.classList.remove('opacity-0');
@@ -501,8 +446,6 @@
                 hintsContainer.classList.add('opacity-0');
                 hintLeft.textContent = '';
                 hintRight.textContent = '';
-                
-                ghostTile.style.display = 'none'; 
             }
             updateUndoButtonState(); 
         }
@@ -516,78 +459,8 @@
             });
         }
 
-        function updateGhostTile(e) {
-            // Only show ghost if tile selected, NOT dragging, AND ghost mode is ACTIVE
-            if (!currentTileSize || isDragging || !ghostModeActive) {
-                ghostTile.style.display = 'none';
-                return;
-            }
-            const gridRect = tilingGrid.getBoundingClientRect();
-            const isOverGrid = (e.clientX >= gridRect.left && e.clientX < gridRect.right && e.clientY >= gridRect.top && e.clientY < gridRect.bottom);
-
-            if (isOverGrid) {
-                ghostTile.style.display = 'block';
-                const relativeX = e.clientX - gridRect.left;
-                const relativeY = e.clientY - gridRect.top;
-                const unitX = Math.floor(relativeX / UNIT_PIXEL_SIZE);
-                const unitY = Math.floor(relativeY / UNIT_PIXEL_SIZE);
-                const snapX = unitX * UNIT_PIXEL_SIZE;
-                const snapY = unitY * UNIT_PIXEL_SIZE;
-                const outOfBounds = unitX < 0 || unitY < 0 || unitX + currentTileSize > GRID_SIZE || unitY + currentTileSize > GRID_SIZE;
-                const isOverlapped = checkOverlap(unitX, unitY, currentTileSize);
-
-                if (outOfBounds || isOverlapped) {
-                    ghostTile.classList.add('invalid');
-                } else {
-                    ghostTile.classList.remove('invalid');
-                }
-                ghostTile.style.left = `${gridRect.left + snapX}px`;
-                ghostTile.style.top = `${gridRect.top + snapY}px`;
-            } else {
-                ghostTile.style.display = 'none';
-            }
-        }
-        
-        function handlePlacementClick(e) {
-            // STRICT: Only Left Click (0) allows placement
-            if (e.button !== 0) return;
-
-            // Safety check: ensure we didn't just finish a drag operation
-            if (justDropped) return;
-
-            // Only allow placement if ghost mode is ACTIVE
-            if (!currentTileSize || isDragging || !ghostModeActive) return;
-
-            if (e.target.closest('.placed-tile')) return;
-            
-            // Recalculate position on click to ensure accuracy
-            const gridRect = tilingGrid.getBoundingClientRect();
-            const relativeX = e.clientX - gridRect.left;
-            const relativeY = e.clientY - gridRect.top;
-            const unitX = Math.floor(relativeX / UNIT_PIXEL_SIZE);
-            const unitY = Math.floor(relativeY / UNIT_PIXEL_SIZE);
-
-            const outOfBounds = unitX < 0 || unitY < 0 || unitX + currentTileSize > GRID_SIZE || unitY + currentTileSize > GRID_SIZE;
-            const isOverlapped = checkOverlap(unitX, unitY, currentTileSize);
-
-            if (outOfBounds || isOverlapped) {
-                gridWrapper.style.borderColor = '#EF4444'; 
-                setTimeout(() => { gridWrapper.style.borderColor = '#374151'; }, 200);
-                return; 
-            }
-            
-            pushState();
-            const newTileElement = createTileElement(currentTileSize, false);
-            finalizeTilePlacement(unitX, unitY, currentTileSize, newTileElement);
-            checkWinCondition();
-        }
-
         function startDragFromSource(e, size) {
             e.preventDefault(); e.stopPropagation();
-            // Disable ghost mode if dragging manually
-            ghostModeActive = false; 
-            updateStatus();
-            
             selectTileSize(size); 
             currentDragTile = createTileElement(size, false);
             currentDragTile.classList.add('dragging');
@@ -600,16 +473,12 @@
             dragOffsetY = (e.clientY - tileRect.top) * factor;
             isDragging = true;
             dragOriginIsSource = true;
-            ghostTile.style.display = 'none'; 
             setupGlobalDragEvents();
         }
 
         function startDragFromBoard(e, tileData) {
-            // STRICT CHECK: Only allow drag on LEFT CLICK (button 0)
-            if (e.button !== 0) return;
-
+            if (e.button !== 0) return; // Strict left click
             e.preventDefault(); e.stopPropagation(); 
-            ghostTile.style.display = 'none'; 
             if (currentTileSize === null || currentTileSize !== tileData.size) selectTileSize(tileData.size);
             placedTiles = placedTiles.filter(t => t !== tileData);
             calculateUnitSize();
@@ -645,19 +514,12 @@
                 } else {
                      currentDragTile.classList.add('invalid'); 
                 }
-            } else {
-                updateGhostTile(e); 
             }
         }
 
         function onMouseUp(e) {
             if (!isDragging || !currentDragTile) return;
             isDragging = false;
-            
-            // Mark that a drop just happened to prevent immediate click firing
-            justDropped = true;
-            setTimeout(() => { justDropped = false; }, 100);
-            
             currentDragTile.classList.remove('dragging');
             const size = parseInt(currentDragTile.dataset.size);
             const gridRect = gridWrapper.getBoundingClientRect();
@@ -686,7 +548,6 @@
             dragOriginIsSource = false;
             removeGlobalDragEvents();
             updateStatus();
-            updateGhostTile(e);
         }
         
         function handleDrop(size) {
@@ -741,7 +602,6 @@
                     gridWrapper.classList.add('pulse-win'); 
                     resetButton.disabled = true;
                     undoButton.disabled = true; 
-                    ghostTile.style.display = 'none';
                     setTimeout(() => {
                         gridWrapper.classList.remove('pulse-win'); 
                         showSummaryDialog(true);
@@ -764,7 +624,6 @@
             gridWrapper.classList.remove('pulse-win'); 
             resetButton.disabled = false;
             updateUndoButtonState(); 
-            if (currentTileSize) updateGhostTileContent(currentTileSize);
             dialogContentArea.classList.add('scale-90', 'opacity-0');
             setTimeout(() => { gameDialog.classList.add('hidden'); }, 300);
         }
@@ -792,7 +651,6 @@
             const tileText = `${size}x${size}`;
             document.getElementById('summary-content').innerHTML = '';
             document.getElementById('dialog-close-button').style.display = 'none'; 
-            ghostTile.style.display = 'none';
 
             if (success) {
                 const tileVisualHTML = createDialogTileVisual(size);
@@ -842,11 +700,9 @@
             placedTiles.forEach(t => t.element.remove());
             placedTiles = [];
             history = []; 
-            ghostModeActive = false;
             initGrid();
             generateTileOptions();
             updateTileOptions(null);
-            updateGhostTileContent(null); 
             updateStatus();
             if (wasNonFactorAttempt) showSummaryDialog(false, sizeAttempted);
         }
@@ -859,7 +715,6 @@
                  tileData.element.style.left = `${tileData.x * UNIT_PIXEL_SIZE}px`;
                  tileData.element.style.top = `${tileData.y * UNIT_PIXEL_SIZE}px`;
             });
-            if (currentTileSize) updateGhostTileContent(currentTileSize);
             renderMath();
         });
 
@@ -872,8 +727,6 @@
             updateUndoButtonState(); 
             document.addEventListener('mousemove', onMouseMove); 
             document.addEventListener('mouseup', onMouseUp); 
-            gridWrapper.addEventListener('click', handlePlacementClick);
-            gridWrapper.addEventListener('contextmenu', (e) => { e.preventDefault(); toggleGhostMode(e); }); 
             
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') deselectTile();
